@@ -1,9 +1,11 @@
+import logging
 import inspect
 from pathlib import Path
 import importlib
 import pkgutil
 
 
+log = logging.getLogger(__name__)
 
 class Collector:
     """Collect tests in 2 steps:
@@ -25,7 +27,7 @@ class Collector:
     def _collect_module_tests(cls, mod_name: str):
         """get test functions (test_) from module given by path."""
         tests = {}
-        print('loading...', mod_name)
+        log.info('load: %s' % mod_name)
         module = importlib.import_module(mod_name)
 
         # load functions
@@ -68,7 +70,6 @@ def collect_paths(specs):
     # process CLI / config test spec with paths
     else:
         raise NotImplementedError('put your tests in "tests" folder.')
-
 
     # collected all tests from found modules
     collector.collect_tests()
