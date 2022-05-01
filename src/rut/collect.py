@@ -3,6 +3,7 @@ import inspect
 from pathlib import Path
 import importlib
 import pkgutil
+from types import ModuleType
 
 
 log = logging.getLogger(__name__)
@@ -17,18 +18,20 @@ class Collector:
         self.tests = {}
 
 
-    def find_pkg_modules(self, path: str):
-        for info in pkgutil.walk_packages([path]):
-            if info.name.startswith('test_'):
-                self.mods.append(f'{path}.{info.name}')
-
+    def find_pkg_modules(self, name: str):
+        # module = importlib.import_module(name)
+        mod_spec: importlib.machinery.ModuleSpec = importlib.util.find_spec(name)
+        if mod_spec.parent == mod_spec.name:  # is package
+            for info in pkgutil.walk_packages(mod_spec.submodule_search_locations):
+                if info.name.startswith('test_'):
+                    self.mods.append(f'{name}.{info.name}')
+        else:
+            self.mods.append(name)
 
     @classmethod
-    def _collect_module_tests(cls, mod_name: str):
+    def _collect_module_tests(cls, module: ModuleType):
         """get test functions (test_) from module given by path."""
         tests = {}
-        log.info('load: %s' % mod_name)
-        module = importlib.import_module(mod_name)
 
         # load functions
         for name, ref in inspect.getmembers(module, inspect.isfunction):
@@ -49,7 +52,9 @@ class Collector:
 
     def collect_tests(self):
         for mod_name in self.mods:
-            self.tests.update(self._collect_module_tests(mod_name))
+            log.info('load: %s' % mod_name)
+            module = importlib.import_module(mod_name)
+            self.tests.update(self._collect_module_tests(module))
 
 
 
@@ -69,7 +74,8 @@ def collect_paths(specs):
             raise NotImplementedError('check src or local')
     # process CLI / config test spec with paths
     else:
-        raise NotImplementedError('put your tests in "tests" folder.')
+        for spec in specs:
+            collector.find_pkg_modules(spec)
 
     # collected all tests from found modules
     collector.collect_tests()

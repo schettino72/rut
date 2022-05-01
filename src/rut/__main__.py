@@ -9,7 +9,7 @@ from .collect import collect_paths
 from .runner import Runner
 
 
-log = logging.getLogger(__name__)
+log = logging.getLogger('rut')
 
 @click.command()
 # logging
@@ -18,11 +18,11 @@ log = logging.getLogger(__name__)
 # @click.option('--log-show', help='show logs on stdout')
 # collection
 # reporting
-@click.argument('paths', nargs=-1, metavar='PKG_MOD')
-def main(paths):
+@click.argument('specs', nargs=-1, metavar='TESTS')
+def main(specs):
     """run unittest tests
 
-    TEST_PATHS: paths to dir package/module
+    TESTS: python package in dot-notation
     """
     # logging.basicConfig(filename='rut.log', filemode='w', level=logging.INFO)
     logging.basicConfig(
@@ -36,7 +36,7 @@ def main(paths):
     log.info("Adding path to sys.path: '%s'." % Path.cwd())
     sys.path.append(str(Path.cwd()))
 
-    collector = collect_paths(paths)
+    collector = collect_paths(specs)
     runner = Runner()
     runner.execute(collector)
 
