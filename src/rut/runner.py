@@ -18,18 +18,19 @@ class Runner:
 
     def execute(self, collector: Collector):
         """execute tests"""
-        for name, test in sorted(collector.tests.items()):
-            log.info('run %s' % name)
+        for mod_name, case_name, case in collector.iter_cases():
+            log.info('run %s::%s' % (mod_name, case_name))
             try:
-                if 'cls' in test:
-                    obj = test['cls']()
-                    test['func'](obj)
+                if case.cls:
+                    obj = case.cls()
+                    case.func(obj)
                 else:
-                    test['func']()
+                    case.func()
+
             except TestFailure as failure:
                 result = 'FAIL'
                 console.print()
-                console.rule(f"[bold red]{name}", style="red")
+                console.rule(f"[bold red]{case_name}", style="red")
                 tb = failure.__traceback__
                 while tb:
                     frame = tb.tb_frame
@@ -46,13 +47,14 @@ class Runner:
                         line_numbers=True,
                         highlight_lines=set([frame.f_lineno]),
                     ))
-                console.print(failure)
+                for arg in failure.args:
+                    console.print(arg)
                 console.rule(style="bright_black", characters="━")
             except Exception:
                 result = 'ERROR'
                 console.print_exception(show_locals=True)
             else:
                 result = 'PASS'
-                console.print(f"{name}: [green]OK[/green]")
+                console.print(f"{mod_name}::{case_name}: [green]OK[/green]")
 
-            test['result'] = result
+            case.result = result

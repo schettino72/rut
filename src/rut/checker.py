@@ -16,7 +16,7 @@ class check:
     def __eq__(self, other):
         self._used = True
         if self.val != other:
-            raise TestFailure(repr(self.val), '!=', repr(other))
+            raise TestFailure("Not equal:", self.val, other)
 
 
     def __del__(self):

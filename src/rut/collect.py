@@ -8,14 +8,25 @@ from types import ModuleType
 
 log = logging.getLogger(__name__)
 
+
+class TestCase:
+    def __init__(self, func, cls=None):
+        """
+        """
+        self.cls = cls
+        self.func = func
+        self.result = None
+
+
 class Collector:
-    """Collect tests in 2 steps:
+    """
     1) find/load python modules
     2) collect tests from module
+    3) select which tests cases will be executed
     """
     def __init__(self):
         self.mods = []  # list of module name in dot notation i.e. `<pkg>.<name>`
-        self.tests = {}
+        self.cases = {}  # mod_name: {test_name, TestCase}
 
 
     def find_pkg_modules(self, name: str):
@@ -36,26 +47,29 @@ class Collector:
         # load functions
         for name, ref in inspect.getmembers(module, inspect.isfunction):
             if name.startswith('test_'):
-                tests[ref.__qualname__] = {'func': ref}
+                tests[ref.__qualname__] = TestCase(ref)
 
         # load class methods
         for cls_name, cls_ref in inspect.getmembers(module, inspect.isclass):
             if cls_name.startswith('Test'):
                 for name, ref in inspect.getmembers(cls_ref, inspect.isfunction):
                     if name.startswith('test_'):
-                        tests[ref.__qualname__] = {
-                            'cls': cls_ref,
-                            'func': ref,
-                        }
+                        tests[ref.__qualname__]  = TestCase(ref, cls=cls_ref)
         return tests
 
 
-    def collect_tests(self):
+    def collect_cases(self):
         for mod_name in self.mods:
             log.info('load: %s' % mod_name)
             module = importlib.import_module(mod_name)
-            self.tests.update(self._collect_module_tests(module))
+            self.cases[mod_name] = self._collect_module_tests(module)
 
+
+    # TODO: create a selector class
+    def iter_cases(self):
+        for mod_name, cases in sorted(self.cases.items()):
+            for case in sorted(cases.values(), key=lambda c: c.func.__code__.co_firstlineno):
+                yield mod_name, case.func.__qualname__, case
 
 
 
@@ -78,5 +92,5 @@ def collect_paths(specs):
             collector.find_pkg_modules(spec)
 
     # collected all tests from found modules
-    collector.collect_tests()
+    collector.collect_cases()
     return collector
