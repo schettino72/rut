@@ -18,14 +18,23 @@ class Runner:
 
     def execute(self, collector: Collector):
         """execute tests"""
+        fixtures = {}
         for mod_name, case_name, case in collector.iter_cases():
             log.info('run %s::%s' % (mod_name, case_name))
             try:
+                kwargs = {}
+                if case_fixtures := getattr(case.func, 'use_fix', None):
+                    for name, fix_func in case_fixtures.items():
+                        fixtures[name] = fix_func()
+                        kwargs[name] = next(fixtures[name])
                 if case.cls:
                     obj = case.cls()
-                    case.func(obj)
+                    case.func(obj, **kwargs)
                 else:
-                    case.func()
+                    case.func(**kwargs)
+                if fixtures:
+                    for name in fixtures.keys():
+                        next(fixtures[name], None)  # should I check StopIteration was raised?
 
             except TestFailure as failure:
                 result = 'FAIL'

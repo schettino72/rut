@@ -40,3 +40,5 @@ def main(specs):
     runner = Runner()
     runner.execute(collector)
 
+if __name__ == '__main__':
+    main()
