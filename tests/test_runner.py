@@ -1,4 +1,6 @@
+import io
 import types
+from contextlib import redirect_stdout
 
 from rut import check
 
@@ -97,3 +99,35 @@ def test_one():
         check(collector.cases['this_test']['test_one'].result) == None
         Runner().execute(collector)
         check(collector.cases['this_test']['test_one'].result) == 'FAIL'
+
+
+
+class TestIO:
+    def test_capture_sucess(self):
+        collector = Collector()
+        src ="""
+def test_print():
+    print('IGNORE>>')
+"""
+        add_test_cases(collector, src)
+        runner_out = io.StringIO()
+        with redirect_stdout(runner_out):
+            Runner().execute(collector)
+        check(runner_out.getvalue()) == 'this_test::test_print: OK\n'
+
+
+    def test_output_error(self):
+        collector = Collector()
+        src ="""
+from rut import check
+def test_print():
+    print('CLUE-HERE')
+    check(1) == 2
+"""
+        add_test_cases(collector, src)
+        runner_out = io.StringIO()
+        with redirect_stdout(runner_out):
+            Runner().execute(collector)
+        got = runner_out.getvalue()
+        assert 'CLUE-HERE' in got
+

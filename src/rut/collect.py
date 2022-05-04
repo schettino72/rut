@@ -13,9 +13,13 @@ class TestCase:
     def __init__(self, func, cls=None):
         """
         """
+        # load-phase
         self.cls = cls
         self.func = func
+
+        # exec-phase
         self.result = None
+        self.io_out = None  # never set if success
 
 
 class Collector:

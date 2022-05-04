@@ -12,25 +12,28 @@ from .runner import Runner
 log = logging.getLogger('rut')
 
 @click.command()
+
 # logging
 # @click.option('--log-level', help='logging level', )
 # @click.option('--log-file', )
-# @click.option('--log-show', help='show logs on stdout')
+@click.option('--log-show', default=False, is_flag=True,
+              help='show logs on stdout/terminal')
+
 # collection
 # reporting
 @click.argument('specs', nargs=-1, metavar='TESTS')
-def main(specs):
+def main(specs, log_show):
     """run unittest tests
 
     TESTS: python package in dot-notation
     """
     # logging.basicConfig(filename='rut.log', filemode='w', level=logging.INFO)
-    logging.basicConfig(
-        level=logging.INFO,
-        format="[cyan]%(name)s[/cyan] %(message)s",
-        datefmt="[%X]",
-        handlers=[RichHandler(markup=True)])
-
+    if log_show:
+        logging.basicConfig(
+            level=logging.INFO,
+            format="[cyan]%(name)s[/cyan] %(message)s",
+            datefmt="[%X]",
+            handlers=[RichHandler(markup=True)])
 
     # add current dir - with lowest priority.
     log.info("Adding path to sys.path: '%s'." % Path.cwd())

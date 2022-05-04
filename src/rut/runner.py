@@ -1,6 +1,9 @@
+import io
+import sys
 import inspect
 import logging
 import asyncio
+from contextlib import redirect_stdout, redirect_stderr
 
 from rich.console import Console
 from rich.syntax import Syntax
@@ -10,20 +13,19 @@ from .collect import Collector
 
 
 log = logging.getLogger(__name__)
-console = Console()
 
 class Runner:
     def __init__(self):
-        pass
+        self.console = Console()
 
     def execute(self, collector: Collector):
         """execute tests"""
         fixtures = {}
         for mod_name, case_name, case in collector.iter_cases():
             log.info('run %s::%s' % (mod_name, case_name))
-            is_coro = inspect.iscoroutinefunction(case.func)
-            try:
 
+            case_out = io.StringIO()
+            try:
                 # kwargs contain fixtures values for dependency injection
                 kwargs = {}
                 if case_fixtures := getattr(case.func, 'use_fix', None):
@@ -31,17 +33,8 @@ class Runner:
                         fixtures[name] = fix_func()
                         kwargs[name] = next(fixtures[name])
 
-                if case.cls:
-                    obj = case.cls()
-                    if is_coro:
-                        asyncio.run(case.func(obj, **kwargs))
-                    else:
-                        case.func(obj, **kwargs)
-                else:
-                    if is_coro:
-                        asyncio.run(case.func(**kwargs))
-                    else:
-                        case.func(**kwargs)
+                with redirect_stdout(case_out):
+                    self._exec_case(case, kwargs)
 
                 # fixture cleanup
                 if fixtures:
@@ -49,18 +42,39 @@ class Runner:
                         next(fixtures[name], None)  # should I check StopIteration was raised?
 
             except TestFailure as failure:
-                result = 'FAIL'
+                case.result = 'FAIL'
+                case.io_out = case_out.getvalue()
                 self._print_failure(case_name, failure)
+                self.console.print(f'++++++++++++++++++\n{case.io_out}\n+++++++++++++++++++++')
             except Exception:
-                result = 'ERROR'
-                console.print_exception(show_locals=True)
+                case.result = 'ERROR'
+                case.io_out = case_out
+                self.console.print_exception(show_locals=True)
             else:
-                result = 'SUCCESS'
-                console.print(f"{mod_name}::{case_name}: [green]OK[/green]")
+                case.result = 'SUCCESS'
+                self.console.print(f"{mod_name}::{case_name}: [green]OK[/green]")
 
-            case.result = result
+
+    def _exec_case(self, case, case_kwargs):
+        """execute a single tests case.
+        Deal with function/method, async
+        """
+        is_coro = inspect.iscoroutinefunction(case.func)
+        if case.cls:
+            obj = case.cls()
+            if is_coro:
+                asyncio.run(case.func(obj, **case_kwargs))
+            else:
+                case.func(obj, **case_kwargs)
+        else:
+            if is_coro:
+                asyncio.run(case.func(**case_kwargs))
+            else:
+                case.func(**case_kwargs)
+
 
     def _print_failure(self, case_name, failure: TestFailure):
+        console = self.console
         console.print()
         console.rule(f"[bold red]{case_name}", style="red")
         tb = failure.__traceback__
@@ -82,6 +96,6 @@ class Runner:
                 ))
             except OSError:  # can not getsource of code
                 pass
-        for arg in failure.args:
-            console.print(arg)
+        for arg in failure.args[1:]:
+            console.print(repr(arg))
         console.rule(style="bright_black", characters="━")
