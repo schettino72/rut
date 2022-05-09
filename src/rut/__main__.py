@@ -21,8 +21,10 @@ log = logging.getLogger('rut')
 
 # collection
 # reporting
+@click.option('--worker', default=False, is_flag=True,
+              help='run tests as worker, output as msgpack')
 @click.argument('specs', nargs=-1, metavar='TESTS')
-def main(specs, log_show):
+def main(specs, log_show, worker):
     """run unittest tests
 
     TESTS: python package in dot-notation
@@ -35,9 +37,10 @@ def main(specs, log_show):
             datefmt="[%X]",
             handlers=[RichHandler(markup=True)])
 
-    # add current dir - with lowest priority.
+    # add current dir
+    # FIXME: should not be always added
     log.info("Adding path to sys.path: '%s'." % Path.cwd())
-    sys.path.append(str(Path.cwd()))
+    sys.path.insert(0, str(Path.cwd()))
 
     collector = collect_paths(specs)
     runner = Runner()

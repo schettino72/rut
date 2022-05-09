@@ -1,4 +1,7 @@
+rut.log
+
 dist
+.coverage
 
 __pycache__
 *.egg-info

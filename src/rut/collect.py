@@ -4,9 +4,125 @@ from pathlib import Path
 import importlib
 import pkgutil
 from types import ModuleType
+from functools import singledispatch
+
+import msgpack
+from rich import traceback as rich_tb
+from rich.pretty import Node as RichNode
+
+from .checker import TestFailure
 
 
 log = logging.getLogger(__name__)
+
+
+class FailureInfo:
+    def __init__(self, name, args, stack):
+        self.name = name
+        self.args = args
+        self.stack = stack
+
+    @classmethod
+    def from_exception(cls, exc: TestFailure):
+        stack = []
+        tb = exc.__traceback__
+        while tb:
+            frame = tb.tb_frame
+            tb = tb.tb_next
+            if frame.f_globals['__package__'] == 'rut':
+                continue
+            code = frame.f_code
+            stack.append({
+                'filename': code.co_filename,
+                'module': frame.f_globals['__name__'],
+                'name': code.co_name,
+                'lineno': frame.f_lineno,
+                'firstlineno': code.co_firstlineno,
+            })
+        return cls(exc.__class__.__name__, exc.args, stack)
+
+class ExceptionInfo:
+    def __init__(self, exc_type, value, trace):
+        self.exc_type = exc_type
+        self.value = value
+        # rich's internal dataclass with traceback info
+        self.trace = trace
+
+    @classmethod
+    def from_exception(cls, exc_info) :
+        exc_type = exc_info[0].__name__
+        value = exc_info[1]
+        # FIXME: locals include way more info then it should rich.pretty.Node
+        # FIXME: extract should support max_depth
+        trace: rich_tb.Trace = rich_tb.Traceback.extract(*exc_info, show_locals=True)
+        return cls(exc_type, value, trace)
+
+
+from rich import inspect as rich_inspect
+
+
+def default_packer(obj):
+    # print('PP', type(obj), obj.__dict__)
+    return obj.__dict__
+
+class CaseOutcome:
+    def __init__(self):
+        # exec-phase
+        self.result = None  # SUCCESS, FAIL, ERROR
+        self.io_out = None  # never set if success
+        self.failure = None  # FailureInfo
+        self.exc_info = None  # ExceptionInfo
+
+    def pack(self):
+        raw = {
+            'r': self.result,
+            'o': self.io_out,
+            'f': self.failure,
+            'e': self.exc_info,
+        }
+        return msgpack.packb(raw, default=default_packer)
+
+    @classmethod
+    def _unpack_local_children(cls, raw_children) -> dict[str, RichNode]:
+        result = []
+        for raw_node in raw_children:
+            child_children = raw_node.pop('children')
+            node = RichNode(**raw_node)
+            if child_children:
+                node.children = cls._unpack_local_children(rawchildren)
+            result.append(node)
+        return result
+
+    @classmethod
+    def unpack(cls, msg):
+        case = CaseOutcome()
+        raw = msgpack.unpackb(msg)
+        case.result = raw['r']
+        case.io_out = raw['o']
+        if raw['f']:
+            case.failure = FailureInfo(**raw['f'])
+        else:
+            case.failure = None
+        if raw['e']:
+            stacks = []
+            for stack_raw in raw['e']['trace']['stacks']:
+                frames = []
+                for frame_raw in stack_raw.pop('frames'):
+                    f_locals = {}
+                    raw_locals = frame_raw.pop('locals')
+                    for name, raw_node in raw_locals.items():
+                        raw_children = raw_node.pop('children')
+                        node = RichNode(**raw_node)
+                        if raw_children:
+                            node.children = cls._unpack_local_children(raw_children)
+                        f_locals[name] = node
+                    frames.append(rich_tb.Frame(**frame_raw, locals=f_locals))
+                stacks.append(rich_tb.Stack(frames=frames, **stack_raw))
+            trace = rich_tb.Trace(stacks)
+            case.exc_info = ExceptionInfo(raw['e']['exc_type'], raw['e']['value'], trace)
+        else:
+            case.exc_info = None
+        return case
 
 
 class TestCase:
@@ -16,10 +132,6 @@ class TestCase:
         # load-phase
         self.cls = cls
         self.func = func
-
-        # exec-phase
-        self.result = None
-        self.io_out = None  # never set if success
 
 
 class Collector:
@@ -74,6 +186,7 @@ class Collector:
         for mod_name, cases in sorted(self.cases.items()):
             for case in sorted(cases.values(), key=lambda c: c.func.__code__.co_firstlineno):
                 yield mod_name, case.func.__qualname__, case
+
 
 
 
