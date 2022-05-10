@@ -12,9 +12,9 @@ from rich.traceback import Traceback
 from rich.syntax import Syntax
 
 from .checker import TestFailure
+from .case import FailureInfo, ErrorInfo
+from .case import TestCase, CaseOutcome
 from .collect import Collector
-from .collect import TestCase, CaseOutcome
-from .collect import FailureInfo, ExceptionInfo
 
 
 log = logging.getLogger(__name__)
@@ -58,10 +58,10 @@ def run_case(mod_name: str, case_name: str, case: TestCase) -> CaseOutcome:
         outcome.result = 'FAIL'
         outcome.io_out = case_out.getvalue()
         outcome.failure = FailureInfo.from_exception(failure)
-    except Exception as exception:
+    except Exception:
         outcome.result = 'ERROR'
         outcome.io_out = case_out.getvalue()
-        outcome.exc_info = ExceptionInfo.from_exception(sys.exc_info())
+        outcome.error = ErrorInfo.from_exception(sys.exc_info())  # type: ignore
     else:
         outcome.result = 'SUCCESS'
     return outcome
@@ -71,7 +71,8 @@ def run_case(mod_name: str, case_name: str, case: TestCase) -> CaseOutcome:
 class Runner:
     def __init__(self):
         self.console = Console()
-        self.outcomes = defaultdict(dict) # mod_name: {test_name: TestCase}
+        # mod_name -> test_name: outcome
+        self.outcomes: dict[str, dict[str, CaseOutcome]] = defaultdict(dict)
 
     def execute(self, collector: Collector):
         """execute tests"""
@@ -85,12 +86,14 @@ class Runner:
 
             self.outcomes[mod_name][case_name] = outcome
             if outcome.result == 'FAIL':
+                assert outcome.failure
                 self._print_failure(case_name, outcome.failure)
                 if outcome.io_out:
-                    self.console.print(f'++++++++++++++++++\n{outcome.io_out}\n+++++++++++++++++++++')
+                    self.console.print(f"{'*'*20}\n{outcome.io_out}\n{'*'*20}")
             elif outcome.result == 'ERROR':
                 # FIXME: suppress by module name does not work
-                traceback = Traceback(outcome.exc_info.trace, show_locals=True)
+                assert outcome.error
+                traceback = Traceback(outcome.error.trace, show_locals=True)
                 self.console.print(traceback)
             elif outcome.result == 'SUCCESS':
                 self.console.print(f"{mod_name}::{case_name}: [green]OK[/green]")
@@ -121,7 +124,9 @@ class Runner:
                                 break
                         down_scope.append(obj)
                 scope = down_scope
-
+            if not code:
+                continue
+            # show source of function in frame
             try:
                 console.print(Syntax(
                     inspect.getsource(code),

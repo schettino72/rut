@@ -12,13 +12,11 @@ from .runner import Runner
 log = logging.getLogger('rut')
 
 @click.command()
-
 # logging
 # @click.option('--log-level', help='logging level', )
 # @click.option('--log-file', )
 @click.option('--log-show', default=False, is_flag=True,
               help='show logs on stdout/terminal')
-
 # collection
 # reporting
 @click.option('--worker', default=False, is_flag=True,

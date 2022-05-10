@@ -19,5 +19,5 @@ def calc(n):
     return bar
 
 def test_error():
-    md = {'my': 'dict'}
+    md = {'my': 'dict', 'll': [1, 3, 5]}
     check(calc(5)) == 5.5
