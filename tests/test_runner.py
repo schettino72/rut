@@ -6,7 +6,7 @@ from contextlib import redirect_stdout
 from rut import check
 
 from rut.collect import Selector
-from rut.runner import Runner
+from rut.runner import Runner, Reporter
 
 
 import tempfile
@@ -30,6 +30,13 @@ def add_test_cases(selector, src, name='this_test'):
         selector.cases[name] = selector._collect_module_tests(module)
         return module
 
+def run_all(selector, report=False):
+    runner = Runner()
+    reporter = Reporter()
+    for outcome in runner.execute(selector):
+        if report:
+            reporter.handle_outcome(outcome)
+    return runner
 
 class TestRunnerExecute:
     def test_run_func(self):
@@ -39,8 +46,7 @@ def test_one():
     assert True
 """
         add_test_cases(selector, src)
-        runner = Runner()
-        runner.execute(selector)
+        runner = run_all(selector)
         check(runner.outcomes['this_test']['test_one'].result) == 'SUCCESS'
 
     def test_run_method(self):
@@ -51,8 +57,7 @@ class TestMyClass:
         assert True
 """
         add_test_cases(selector, src)
-        runner = Runner()
-        runner.execute(selector)
+        runner = run_all(selector)
         check(runner.outcomes['this_test']['TestMyClass.test_moo'].result) == 'SUCCESS'
 
 
@@ -74,8 +79,7 @@ class TestMyClass:
 """
         module = add_test_cases(selector, src)
         check(module.track) == []
-        runner = Runner()
-        runner.execute(selector)
+        runner = run_all(selector)
         check(module.track) == ['foo', 'moo']
         check(runner.outcomes['this_test']['test_foo'].result) == 'SUCCESS'
         check(runner.outcomes['this_test']['TestMyClass.test_moo'].result) == 'SUCCESS'
@@ -93,8 +97,7 @@ def test_one():
     assert True
 """
         add_test_cases(selector, src)
-        runner = Runner()
-        runner.execute(selector)
+        runner = run_all(selector)
         check(runner.outcomes['this_test']['test_one'].result) == 'ERROR'
 
     def test_fail(self):
@@ -106,8 +109,7 @@ def test_one():
     check(6) == 3 + 2
 """
         add_test_cases(selector, src)
-        runner = Runner()
-        runner.execute(selector)
+        runner = run_all(selector)
         check(runner.outcomes['this_test']['test_one'].result) == 'FAIL'
 
 
@@ -122,7 +124,7 @@ def test_print():
         add_test_cases(selector, src)
         runner_out = io.StringIO()
         with redirect_stdout(runner_out):
-            Runner().execute(selector)
+            run_all(selector, True)
         check(runner_out.getvalue()) == 'this_test::test_print: OK\n'
 
 
@@ -137,7 +139,7 @@ def test_print():
         add_test_cases(selector, src)
         runner_out = io.StringIO()
         with redirect_stdout(runner_out):
-            Runner().execute(selector)
+            run_all(selector, True)
         got = runner_out.getvalue()
         assert 'CLUE-HERE' in got
 

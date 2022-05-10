@@ -21,91 +21,88 @@ log = logging.getLogger(__name__)
 
 
 
-def run_case(mod_name: str, case_name: str, case: TestCase) -> CaseOutcome:
-    """run a single TestCase, returns a CaseOutcome"""
-    fixtures = {}
-    case_out = io.StringIO()
-    outcome = CaseOutcome()
-    try:
-        # kwargs contain fixtures values for dependency injection
-        kwargs = {}
-        if case_fixtures := getattr(case.func, 'use_fix', None):
-            for name, fix_func in case_fixtures.items():
-                fixtures[name] = fix_func()
-                kwargs[name] = next(fixtures[name])
-
-        # TODO: stderr, logs
-        with redirect_stdout(case_out):
-            is_coro = inspect.iscoroutinefunction(case.func)
-            if case.cls:
-                obj = case.cls()
-                if is_coro:
-                    asyncio.run(case.func(obj, **kwargs))
-                else:
-                    case.func(obj, **kwargs)
-            else:
-                if is_coro:
-                    asyncio.run(case.func(**kwargs))
-                else:
-                    case.func(**kwargs)
-
-        # fixture cleanup
-        if fixtures:
-            for name in fixtures.keys():
-                next(fixtures[name], None)  # should I check StopIteration was raised?
-
-    except TestFailure as failure:
-        outcome.result = 'FAIL'
-        outcome.io_out = case_out.getvalue()
-        outcome.failure = FailureInfo.from_exception(failure)
-    except Exception:
-        outcome.result = 'ERROR'
-        outcome.io_out = case_out.getvalue()
-        outcome.error = ErrorInfo.from_exception(sys.exc_info())  # type: ignore
-    else:
-        outcome.result = 'SUCCESS'
-    return outcome
-
-
-
 class Runner:
-    def __init__(self, exitfirst=False):
-        self.console = Console()
+    def __init__(self):
         # mod_name -> test_name: outcome
         self.outcomes: dict[str, dict[str, CaseOutcome]] = defaultdict(dict)
 
-        # options
-        self.exitfirst = exitfirst
+
+    @staticmethod
+    def run_case(mod_name: str, case_name: str, case: TestCase) -> CaseOutcome:
+        """run a single TestCase, returns a CaseOutcome"""
+        fixtures = {}
+        case_out = io.StringIO()
+        outcome = CaseOutcome(mod_name, case_name)
+        try:
+            # kwargs contain fixtures values for dependency injection
+            kwargs = {}
+            if case_fixtures := getattr(case.func, 'use_fix', None):
+                for name, fix_func in case_fixtures.items():
+                    fixtures[name] = fix_func()
+                    kwargs[name] = next(fixtures[name])
+
+            # TODO: stderr, logs
+            with redirect_stdout(case_out):
+                is_coro = inspect.iscoroutinefunction(case.func)
+                if case.cls:
+                    obj = case.cls()
+                    if is_coro:
+                        asyncio.run(case.func(obj, **kwargs))
+                    else:
+                        case.func(obj, **kwargs)
+                else:
+                    if is_coro:
+                        asyncio.run(case.func(**kwargs))
+                    else:
+                        case.func(**kwargs)
+
+            # fixture cleanup
+            if fixtures:
+                for name in fixtures.keys():
+                    next(fixtures[name], None)  # should I check StopIteration was raised?
+
+        except TestFailure as failure:
+            outcome.result = 'FAIL'
+            outcome.io_out = case_out.getvalue()
+            outcome.failure = FailureInfo.from_exception(failure)
+        except Exception:
+            outcome.result = 'ERROR'
+            outcome.io_out = case_out.getvalue()
+            outcome.error = ErrorInfo.from_exception(sys.exc_info())  # type: ignore
+        else:
+            outcome.result = 'SUCCESS'
+        return outcome
 
 
     def execute(self, selector: Selector):
         """execute tests"""
         for mod_name, case_name, case in selector.iter_cases():
             log.info('run %s::%s' % (mod_name, case_name))
-            outcome = run_case(mod_name, case_name, case)
-
-            msg = outcome.pack()
-            # print('MSG', msg)
-            outcome = CaseOutcome.unpack(msg)
-
+            outcome = self.run_case(mod_name, case_name, case)
             self.outcomes[mod_name][case_name] = outcome
-            if outcome.result == 'FAIL':
-                assert outcome.failure
-                self._print_failure(case_name, outcome.failure)
-                if outcome.io_out:
-                    self.console.print(f"{'*'*20}\n{outcome.io_out}\n{'*'*20}")
-            elif outcome.result == 'ERROR':
-                # FIXME: suppress by module name does not work
-                assert outcome.error
-                traceback = Traceback(outcome.error.trace, show_locals=True)
-                self.console.print(traceback)
-            elif outcome.result == 'SUCCESS':
-                self.console.print(f"{mod_name}::{case_name}: [green]OK[/green]")
-            else:  # pragma: no cover
-                raise NotImplementedError()
+            yield outcome
 
-            if self.exitfirst and outcome.result in ('ERROR', 'FAIL'):
-                break
+
+class Reporter:
+    def __init__(self):
+        self.console = Console()
+
+    def handle_outcome(self, outcome):
+        print = self.console.print
+        if outcome.result == 'FAIL':
+            assert outcome.failure
+            self._print_failure(outcome.case_name, outcome.failure)
+            if outcome.io_out:
+                print(f"{'*'*20}\n{outcome.io_out}\n{'*'*20}")
+        elif outcome.result == 'ERROR':
+            # FIXME: suppress by module name does not work
+            assert outcome.error
+            traceback = Traceback(outcome.error.trace, show_locals=True)
+            self.console.print(traceback)
+        elif outcome.result == 'SUCCESS':
+            print(f"{outcome.mod_name}::{outcome.case_name}: [green]OK[/green]")
+        else:  # pragma: no cover
+            raise NotImplementedError()
 
 
     def _print_failure(self, case_name, failure: FailureInfo):

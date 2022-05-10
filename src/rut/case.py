@@ -125,7 +125,9 @@ class MsgpackMixin:
 
 
 class CaseOutcome(MsgpackMixin):
-    def __init__(self):
+    def __init__(self, mod_name, case_name):
+        self.mod_name = mod_name
+        self.case_name = case_name
         # exec-phase
         self.result = None  # SUCCESS, FAIL, ERROR
         self.io_out: Optional[str] = None              # never set if SUCESS

@@ -4,7 +4,7 @@ import click
 from rich.logging import RichHandler
 
 from .collect import Collector, Selector
-from .runner import Runner
+from .runner import Runner, Reporter
 
 
 log = logging.getLogger('rut')
@@ -38,9 +38,15 @@ def main(args, log_show, exitfirst, worker):
 
     collector = Collector()
     collector.process_args(args)
+
     selector = Selector(collector.mods)
-    runner = Runner(exitfirst=exitfirst)
-    runner.execute(selector)
+    reporter = Reporter()
+    runner = Runner()
+
+    for outcome in runner.execute(selector):
+        reporter.handle_outcome(outcome)
+        if exitfirst and outcome.result in ('ERROR', 'FAIL'):
+            break
 
 if __name__ == '__main__':
     main()
