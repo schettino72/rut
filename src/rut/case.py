@@ -73,6 +73,8 @@ class MsgpackMixin:
 
     def pack(self):
         raw = {
+            'm': self.mod_name,
+            'c': self.case_name,
             'r': self.result,
             'o': self.io_out,
             'f': self.failure,
@@ -92,9 +94,8 @@ class MsgpackMixin:
         return result
 
     @classmethod
-    def unpack(cls, msg):
-        case = CaseOutcome()
-        raw = msgpack.unpackb(msg)
+    def from_data(cls, raw):
+        case = CaseOutcome(raw['m'], raw['c'])
         case.result = raw['r']
         case.io_out = raw['o']
         if raw['f']:
@@ -122,6 +123,10 @@ class MsgpackMixin:
             case.error = None
         return case
 
+    @classmethod
+    def unpack(cls, msg):
+        raw = msgpack.unpackb(msg)
+        return cls.from_data(raw)
 
 
 class CaseOutcome(MsgpackMixin):

@@ -28,20 +28,27 @@ class Collector:
     def __init__(self):
         # list of module name in dot notation i.e. `<pkg>.<name>`
         self.mods: list[str] = []
+        self.specs = []
 
-    @classmethod
+    @staticmethod
+    def import_spec(name, fn):
+        """import module given file_location spec args"""
+        spec = spec_from_file_location(name, fn)
+        module = module_from_spec(spec)
+        spec.loader.exec_module(module)
+        sys.modules[name] = module
+        return spec
+
     def _import_pkg_path(self, fn):
         """import dir without modifying sys.path"""
         # FIXME: handle sub-package
         pkg_name = Path(fn).name
-        spec = spec_from_file_location(pkg_name, f'{fn}/__init__.py')
-        module = module_from_spec(spec)
-        spec.loader.exec_module(module)
-        sys.modules[pkg_name] = module
+        spec_args = pkg_name, f'{fn}/__init__.py'
+        spec = self.import_spec(*spec_args)
+        self.specs.append(spec_args)
         return spec, pkg_name
 
 
-    @classmethod
     def _import_mod_path(self, fn):
         path = Path(fn)
         mod_name = path.stem
@@ -51,11 +58,8 @@ class Collector:
             mod_name = f'{parent.name}.{mod_name}'
             spec_args = (parent.name, str(parent / '__init__.py'))
             parent = parent.parent
-        print(spec_args, mod_name)
-        spec = spec_from_file_location(*spec_args)
-        module = module_from_spec(spec)
-        spec.loader.exec_module(module)
-        sys.modules[spec_args[0]] = module
+        spec = self.import_spec(*spec_args)
+        self.specs.append(spec_args)
         return spec, mod_name
 
     def process_args(self, args: list[str]):
