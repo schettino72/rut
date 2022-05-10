@@ -2,6 +2,7 @@ rut.log
 
 dist
 .coverage
+.doit.db*
 
 __pycache__
 *.egg-info

@@ -2,6 +2,7 @@
 DOIT_CONFIG = {
     'verbosity': 2,
     'continue': True,
+    'default_tasks': ['pyflakes', 'mypy', 'pycodestyle'],
 }
 
 def task_pyflakes():
@@ -17,4 +18,14 @@ def task_mypy():
 def task_pycodestyle():
     return {
         'actions': ['pycodestyle src'],
+    }
+
+
+
+
+def task_coverage():
+    return {
+        'actions': [
+            'coverage erase; coverage run -m rut; coverage report -m --omit="/tmp/*"',
+        ],
     }

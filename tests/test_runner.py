@@ -5,7 +5,7 @@ from contextlib import redirect_stdout
 
 from rut import check
 
-from rut.collect import Collector
+from rut.collect import Selector
 from rut.runner import Runner
 
 
@@ -14,7 +14,7 @@ from importlib import util
 import importlib.machinery
 
 
-def add_test_cases(collector, src, name='this_test'):
+def add_test_cases(selector, src, name='this_test'):
     """create module from src text, and add its TestCase's to collector"""
 
     with tempfile.NamedTemporaryFile(suffix='.py') as tmp:
@@ -26,38 +26,38 @@ def add_test_cases(collector, src, name='this_test'):
         spec.loader.exec_module(module)
         sys.modules['tmp'] = module
 
-        collector.mods.append(name)
-        collector.cases[name] = collector._collect_module_tests(module)
+        selector.mods.append(name)
+        selector.cases[name] = selector._collect_module_tests(module)
         return module
 
 
 class TestRunnerExecute:
     def test_run_func(self):
-        collector = Collector()
+        selector = Selector()
         src = """
 def test_one():
     assert True
 """
-        add_test_cases(collector, src)
+        add_test_cases(selector, src)
         runner = Runner()
-        runner.execute(collector)
+        runner.execute(selector)
         check(runner.outcomes['this_test']['test_one'].result) == 'SUCCESS'
 
     def test_run_method(self):
-        collector = Collector()
+        selector = Selector()
         src = """
 class TestMyClass:
     def test_moo(self):
         assert True
 """
-        add_test_cases(collector, src)
+        add_test_cases(selector, src)
         runner = Runner()
-        runner.execute(collector)
+        runner.execute(selector)
         check(runner.outcomes['this_test']['TestMyClass.test_moo'].result) == 'SUCCESS'
 
 
     def test_run_async(self):
-        collector = Collector()
+        selector = Selector()
         src = """
 track = []
 async def some_val(val):
@@ -72,10 +72,10 @@ class TestMyClass:
         track.append(await some_val('moo'))
         assert True
 """
-        module = add_test_cases(collector, src)
+        module = add_test_cases(selector, src)
         check(module.track) == []
         runner = Runner()
-        runner.execute(collector)
+        runner.execute(selector)
         check(module.track) == ['foo', 'moo']
         check(runner.outcomes['this_test']['test_foo'].result) == 'SUCCESS'
         check(runner.outcomes['this_test']['TestMyClass.test_moo'].result) == 'SUCCESS'
@@ -84,7 +84,7 @@ class TestMyClass:
 
 class TestRunnerResult:
     def test_error(self):
-        collector = Collector()
+        selector = Selector()
         src = """
 def inner():
     5/0
@@ -92,52 +92,52 @@ def test_one():
     inner()
     assert True
 """
-        add_test_cases(collector, src)
+        add_test_cases(selector, src)
         runner = Runner()
-        runner.execute(collector)
+        runner.execute(selector)
         check(runner.outcomes['this_test']['test_one'].result) == 'ERROR'
 
     def test_fail(self):
-        collector = Collector()
+        selector = Selector()
         src = """
 from rut import check
 def test_one():
     calculated = 6
     check(6) == 3 + 2
 """
-        add_test_cases(collector, src)
+        add_test_cases(selector, src)
         runner = Runner()
-        runner.execute(collector)
+        runner.execute(selector)
         check(runner.outcomes['this_test']['test_one'].result) == 'FAIL'
 
 
 
 class TestIO:
     def test_capture_sucess(self):
-        collector = Collector()
+        selector = Selector()
         src ="""
 def test_print():
     print('IGNORE>>')
 """
-        add_test_cases(collector, src)
+        add_test_cases(selector, src)
         runner_out = io.StringIO()
         with redirect_stdout(runner_out):
-            Runner().execute(collector)
+            Runner().execute(selector)
         check(runner_out.getvalue()) == 'this_test::test_print: OK\n'
 
 
     def test_output_error(self):
-        collector = Collector()
+        selector = Selector()
         src ="""
 from rut import check
 def test_print():
     print('CLUE-HERE')
     check(1) == 2
 """
-        add_test_cases(collector, src)
+        add_test_cases(selector, src)
         runner_out = io.StringIO()
         with redirect_stdout(runner_out):
-            Runner().execute(collector)
+            Runner().execute(selector)
         got = runner_out.getvalue()
         assert 'CLUE-HERE' in got
 

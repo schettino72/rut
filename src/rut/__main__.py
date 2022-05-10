@@ -1,11 +1,9 @@
-import sys
 import logging
-from pathlib import Path
 
 import click
 from rich.logging import RichHandler
 
-from .collect import collect_paths
+from .collect import Collector, Selector
 from .runner import Runner
 
 
@@ -19,10 +17,13 @@ log = logging.getLogger('rut')
               help='show logs on stdout/terminal')
 # collection
 # reporting
+# runner
+@click.option('-x', '--exitfirst', default=False, is_flag=True,
+              help='exit instantly on first error or failed test.')
 @click.option('--worker', default=False, is_flag=True,
               help='run tests as worker, output as msgpack')
-@click.argument('specs', nargs=-1, metavar='TESTS')
-def main(specs, log_show, worker):
+@click.argument('args', nargs=-1, metavar='TESTS')
+def main(args, log_show, exitfirst, worker):
     """run unittest tests
 
     TESTS: python package in dot-notation
@@ -35,14 +36,11 @@ def main(specs, log_show, worker):
             datefmt="[%X]",
             handlers=[RichHandler(markup=True)])
 
-    # add current dir
-    # FIXME: should not be always added
-    log.info("Adding path to sys.path: '%s'." % Path.cwd())
-    sys.path.insert(0, str(Path.cwd()))
-
-    collector = collect_paths(specs)
-    runner = Runner()
-    runner.execute(collector)
+    collector = Collector()
+    collector.process_args(args)
+    selector = Selector(collector.mods)
+    runner = Runner(exitfirst=exitfirst)
+    runner.execute(selector)
 
 if __name__ == '__main__':
     main()

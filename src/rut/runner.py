@@ -14,7 +14,7 @@ from rich.syntax import Syntax
 from .checker import TestFailure
 from .case import FailureInfo, ErrorInfo
 from .case import TestCase, CaseOutcome
-from .collect import Collector
+from .collect import Selector
 
 
 log = logging.getLogger(__name__)
@@ -69,14 +69,18 @@ def run_case(mod_name: str, case_name: str, case: TestCase) -> CaseOutcome:
 
 
 class Runner:
-    def __init__(self):
+    def __init__(self, exitfirst=False):
         self.console = Console()
         # mod_name -> test_name: outcome
         self.outcomes: dict[str, dict[str, CaseOutcome]] = defaultdict(dict)
 
-    def execute(self, collector: Collector):
+        # options
+        self.exitfirst = exitfirst
+
+
+    def execute(self, selector: Selector):
         """execute tests"""
-        for mod_name, case_name, case in collector.iter_cases():
+        for mod_name, case_name, case in selector.iter_cases():
             log.info('run %s::%s' % (mod_name, case_name))
             outcome = run_case(mod_name, case_name, case)
 
@@ -99,6 +103,9 @@ class Runner:
                 self.console.print(f"{mod_name}::{case_name}: [green]OK[/green]")
             else:  # pragma: no cover
                 raise NotImplementedError()
+
+            if self.exitfirst and outcome.result in ('ERROR', 'FAIL'):
+                break
 
 
     def _print_failure(self, case_name, failure: FailureInfo):
