@@ -4,9 +4,8 @@ import asyncio
 
 import click
 from rich.logging import RichHandler
-import msgpack  # type: ignore
 
-from .saq import ProcessManager
+from .saq import ProcessManager, Worker, MessageType
 from .case import CaseOutcome
 from .collect import Collector, Selector
 from .runner import Runner, Reporter
@@ -78,65 +77,60 @@ async def rut_master(collector, np):
     for wid in range(np):
         mod = mods.pop(0)
         if mod:
-            worker = await manager.exec(f't{wid}', f'rut --worker --imp {imp_spec}')
-            worker.write_to_worker(mod)
+            work_mgr = await manager.exec(f't{wid}', f'rut --worker --imp {imp_spec}')
+            work_mgr.send_job(mod)
 
     reporter = Reporter()
-    async for worker, msg in manager.iter_out_msgs():
-        if msg:
-            if msg == 'NEXT':
-                if mods:
-                    worker.write_to_worker(mods.pop(0))
-                else:
-                    # closing stdin signals the process to terminate
-                    worker.process.stdin.close()
+    async for work_mgr, msg_type, msg in manager.iter_out_msgs():
+        if msg_type == MessageType.READY:
+            if mods:
+                work_mgr.send_job(mods.pop(0))
             else:
-                outcome = CaseOutcome.from_data(msg)
-                reporter.handle_outcome(outcome)
-                # print(f'[{worker.name}] {msg}')
-        else:  # completed
-            err = await worker.process.stderr.read()
-            if err:
-                print(f'====== {worker.name}: Error ({worker.process.returncode}) =====')
-                print(err.decode().rstrip())
-                print('===================================')
-                print(f'[{worker.name}] ERROR')
-                # await worker.process.wait()
+                # closing stdin signals the process to terminate
+                # print(f'[{work_mgr.name}] CLOSING')
+                work_mgr.process.stdin.close()
+            continue
+
+        if msg_type == MessageType.MSG:
+            outcome = CaseOutcome.from_data(msg)
+            reporter.handle_outcome(outcome)
+            continue
+
+        assert msg_type == MessageType.DONE
+        # print(f'[{work_mgr.name}] DONE')
+        err = await work_mgr.process.stderr.read()
+        if err:
+            print(f'====== {work_mgr.name}:',
+                  f'Error ({work_mgr.process.returncode}) =====')
+            print(err.decode().rstrip())
+            print('===================================')
+            print(f'[{work_mgr.name}] ERROR')
+    # print('all done')
     return 0
 
 
 
-# echo -ne '\xb2tests.test_collect\xb1tests.test_runner' | rut --worker --imp 'tests|tests/__init__.py' # noqa
+# echo -ne '\x01\x00\x00\x00\x13\xb2tests.test_collect\x01\x00\x00\x00\x12\xb1tests.test_runner' | rut --worker --imp 'tests|tests/__init__.py' # noqa
 def rut_worker(imp_spec):
     """worker process when using multiple processes"""
-    def write(data, pack=True):
-        msg = msgpack.packb(data) if pack else data
-        sys.stdout.buffer.write(msg)
-        sys.stdout.flush()
-
+    worker = Worker(sys.stdout.buffer)
     imp_name, imp_path = imp_spec.split('|')
     Collector.import_spec(imp_name, imp_path)
     runner = Runner()
 
-    unpacker = msgpack.Unpacker()
     while True:
-        bin_data = sys.stdin.buffer.read(1)
-        if not bin_data:
-            break  # no more jobs
-        unpacker.feed(bin_data)
-        try:
-            msg = unpacker.unpack()
-        except msgpack.OutOfData:
-            continue  # read more data
-        if not msg:
+        msg_type, msg = worker.read_one(sys.stdin.buffer)
+        if msg_type is None:
             break
+        assert msg_type == MessageType.JOB
         ###################################### Actual worker logic
         # supports receiveing only module names as msg
         selector = Selector([msg])
         for outcome in runner.execute(selector):
-            write(outcome.pack(), False)
+            worker.send_msg(outcome.pack())
         ######################################
-        write('NEXT')
+        worker.send_ctl(MessageType.READY)
+    worker.send_ctl(MessageType.DONE)
     return 0
 
 
