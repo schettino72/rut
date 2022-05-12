@@ -29,6 +29,7 @@ class Collector:
         # list of module name in dot notation i.e. `<pkg>.<name>`
         self.mods: list[str] = []
         self.specs = []
+        self.all_tests = True  # executing all tests
 
     @staticmethod
     def import_spec(name, fn):
@@ -75,6 +76,7 @@ class Collector:
                 raise NotImplementedError('check src or local')
         # process CLI / config test spec with paths
         else:
+            self.all_tests = False
             for arg in args:
                 # 1) is python module?
                 if arg.endswith('.py'):
