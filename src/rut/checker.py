@@ -64,3 +64,13 @@ class check:
             raise CheckFailure('Not the expected exception kind', expected_cls, exp)
         else:
             raise CheckFailure('No exception raised', expected_cls)
+
+
+    # str methods
+    def startswith(self, substr):
+        if not self.val.startswith(substr):
+            raise CheckFailure('Value does not start with str', self.val, substr)
+
+    def has_line(self, line):
+        if line not in self.val.splitlines():
+            raise CheckFailure('Line not found', self.val, line)

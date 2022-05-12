@@ -29,7 +29,7 @@ class TestFailureInfo:
 
 def sample_error(param):
     my_dict = {'foo': [param]}
-    raise ValueError('Not a value')
+    raise ValueError(f'Not a value {my_dict}')
 
 class TestErrorInfo:
     def test_error_from_exception(self):
@@ -38,7 +38,7 @@ class TestErrorInfo:
         except ValueError:
             info = case.ErrorInfo.from_exc_info(sys.exc_info())
             check(info.exc_type) == 'ValueError'
-            check(info.value.args) == ('Not a value',)
+            check(info.value.args[0]).startswith('Not a value')
             frames = info.trace.stacks[0].frames
             check(frames[0].name) == 'test_error_from_exception'
             check(frames[1].name) == 'sample_error'
@@ -62,9 +62,9 @@ class TestCaseOutcome:
         outcome = case.CaseOutcome('test_sample', 'TestOutcome.test_success')
         outcome.result = 'SUCCESS'
         got = outcome.unpack(outcome.pack())
-        check(outcome.mod_name) == 'test_sample'
-        check(outcome.case_name) == 'TestOutcome.test_success'
-        check(outcome.result) == 'SUCCESS'
+        check(got.mod_name) == 'test_sample'
+        check(got.case_name) == 'TestOutcome.test_success'
+        check(got.result) == 'SUCCESS'
 
     def test_failure(self):
         try:
@@ -74,21 +74,21 @@ class TestCaseOutcome:
             outcome.result = 'FAIL'
             outcome.failure = case.FailureInfo.from_exception(exc)
             got = outcome.unpack(outcome.pack())
-            check(outcome.result) == 'FAIL'
-            check(outcome.failure.stack[1]['name']) == 'sample_func'
+            check(got.result) == 'FAIL'
+            check(got.failure.stack[1]['name']) == 'sample_func'
         else:  # pragma: no cover
             assert False
 
     def test_error(self):
         try:
             sample_error(2)
-        except ValueError as exc:
+        except ValueError:
             outcome = case.CaseOutcome('test_sample', 'TestOutcome.test_error')
             outcome.result = 'ERROR'
             outcome.error = case.ErrorInfo.from_exc_info(sys.exc_info())
             got = outcome.unpack(outcome.pack())
-            check(outcome.result) == 'ERROR'
-            frame1 = outcome.error.trace.stacks[0].frames[1]
+            check(got.result) == 'ERROR'
+            frame1 = got.error.trace.stacks[0].frames[1]
             check(frame1.name) == 'sample_error'
             check(frame1.locals['my_dict'].children[0].children[0].value_repr) == '2'
         else:  # pragma: no cover

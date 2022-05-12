@@ -7,7 +7,7 @@ DOIT_CONFIG = {
 
 def task_pyflakes():
     return {
-        'actions': ['pyflakes src'],
+        'actions': ['pyflakes src tests'],
     }
 
 def task_mypy():

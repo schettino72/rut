@@ -15,8 +15,7 @@ def cov_wrapper(args):
             source.append(f'tests.{fname}')
             source.append(f'rut.{fname[5:]}')
 
-    print(source)
-    cov = Coverage(source=source)
+    cov = Coverage(source=source, omit=['tests/sample_proj/*'])
     cov.erase()
     cov.start()
 

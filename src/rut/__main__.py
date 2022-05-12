@@ -8,7 +8,8 @@ from rich.logging import RichHandler
 from .saq import ProcessManager, Worker, MessageType
 from .case import CaseOutcome
 from .collect import Collector, Selector
-from .runner import Runner, Reporter
+from .runner import Runner
+from .reporter import Reporter
 
 
 log = logging.getLogger('rut')

@@ -1,42 +1,17 @@
-import sys
-import io
-import types
-from contextlib import redirect_stdout
-
 from rut import check
 
+
 from rut.collect import Selector
-from rut.runner import Runner, Reporter
+from rut.runner import Runner
+from .util import add_test_cases
 
 
-import tempfile
-from importlib import util
-import importlib.machinery
 
-
-def add_test_cases(selector, src, name='this_test'):
-    """create module from src text, and add its TestCase's to collector"""
-
-    with tempfile.NamedTemporaryFile(suffix='.py') as tmp:
-        tmp.write(src.encode())
-        tmp.flush()
-
-        spec = util.spec_from_file_location('tmp', tmp.name)
-        module = util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        sys.modules['tmp'] = module
-
-        selector.mods.append(name)
-        selector.cases[name] = selector._collect_module_tests(module)
-        return module
-
-def run_all(selector, report=False):
+def run_all(selector):
     runner = Runner()
-    reporter = Reporter()
-    for outcome in runner.execute(selector):
-        if report:
-            reporter.handle_outcome(outcome)
+    tuple(runner.execute(selector))
     return runner
+
 
 class TestRunnerExecute:
     def test_run_func(self):
@@ -85,6 +60,23 @@ class TestMyClass:
         check(runner.outcomes['this_test']['TestMyClass.test_moo'].result) == 'SUCCESS'
 
 
+    def test_fixture(self):
+        src = """
+from rut import check, use
+
+def my_fixture(arg):
+    yield arg
+
+@use('five', my_fixture, 5)
+def test_fix(five):
+    check(five) == 5
+"""
+        selector = Selector()
+        module = add_test_cases(selector, src)
+        runner = run_all(selector)
+        check(runner.outcomes['this_test']['test_fix'].result) == 'SUCCESS'
+
+
 
 class TestRunnerResult:
     def test_error(self):
@@ -111,35 +103,3 @@ def test_one():
         add_test_cases(selector, src)
         runner = run_all(selector)
         check(runner.outcomes['this_test']['test_one'].result) == 'FAIL'
-
-
-
-class TestIO:
-    def test_capture_sucess(self):
-        selector = Selector()
-        src ="""
-def test_print():
-    print('IGNORE>>')
-"""
-        add_test_cases(selector, src)
-        runner_out = io.StringIO()
-        with redirect_stdout(runner_out):
-            run_all(selector, True)
-        check(runner_out.getvalue()) == 'this_test::test_print: OK\n'
-
-
-    def test_output_error(self):
-        selector = Selector()
-        src ="""
-from rut import check
-def test_print():
-    print('CLUE-HERE')
-    check(1) == 2
-"""
-        add_test_cases(selector, src)
-        runner_out = io.StringIO()
-        with redirect_stdout(runner_out):
-            run_all(selector, True)
-        got = runner_out.getvalue()
-        assert 'CLUE-HERE' in got
-
