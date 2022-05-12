@@ -72,7 +72,7 @@ def test_fix(five):
     check(five) == 5
 """
         selector = Selector()
-        module = add_test_cases(selector, src)
+        add_test_cases(selector, src)
         runner = run_all(selector)
         check(runner.outcomes['this_test']['test_fix'].result) == 'SUCCESS'
 
