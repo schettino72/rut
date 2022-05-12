@@ -1,7 +1,7 @@
 """
  - TestCase: Wrapper around collected test functions
  - CaseOutcome: outcome of TestCase Execution
- - FailureInfo: information of TestFailure check()
+ - FailureInfo: information of CheckFailure check()
  - ErrorInfo: information of exception + traceback
 """
 
@@ -13,17 +13,18 @@ import msgpack  # type: ignore
 from rich.pretty import Node as RichNode
 from rich import traceback as rich_tb
 
-from .checker import TestFailure
+from .checker import CheckFailure
 
 
 class FailureInfo:
+    """save information of a check failure"""
     def __init__(self, name, args, stack):
         self.name = name
         self.args = args
         self.stack = stack
 
     @classmethod
-    def from_exception(cls, exc: TestFailure):
+    def from_exception(cls, exc: CheckFailure):
         stack = []
         tb = exc.__traceback__
         while tb:
@@ -44,7 +45,12 @@ class FailureInfo:
 ExceptionInfo = NewType('ExceptionInfo',
                         tuple[Type[BaseException], BaseException, TracebackType])
 
+
 class ErrorInfo:
+    """save information of an unhandled exception
+
+    Use rich Traceback format
+    """
     def __init__(self, exc_type, value, trace):
         self.exc_type: str = exc_type
         self.value: Any = value
@@ -52,8 +58,8 @@ class ErrorInfo:
         self.trace: rich_tb.Trace = trace
 
     @classmethod
-    def from_exception(cls, exc_info: ExceptionInfo) -> 'ErrorInfo':
-        exc_type = exc_info[0].__class__.__name__
+    def from_exc_info(cls, exc_info: ExceptionInfo) -> 'ErrorInfo':
+        exc_type = exc_info[0].__name__
         value = exc_info[1]
         # FIXME: locals include way more info then it should rich.pretty.Node
         # FIXME: extract should support max_depth
@@ -67,7 +73,7 @@ class MsgpackMixin:
     """Helper to serialize CaseOutcome for IPC"""
 
     @staticmethod
-    def default_packer(obj):
+    def _default_packer(obj):
         # print('PP', type(obj), obj.__dict__)
         return obj.__dict__
 
@@ -80,7 +86,7 @@ class MsgpackMixin:
             'f': self.failure,
             'e': self.error,
         }
-        return msgpack.packb(raw, default=self.default_packer)
+        return msgpack.packb(raw, default=self._default_packer)
 
     @classmethod
     def _unpack_local_children(cls, raw_children) -> list[RichNode]:
@@ -128,6 +134,8 @@ class MsgpackMixin:
         raw = msgpack.unpackb(msg)
         return cls.from_data(raw)
 
+
+RESULTS = ('SUCCESS', 'FAIL', 'ERROR')
 
 class CaseOutcome(MsgpackMixin):
     def __init__(self, mod_name, case_name):

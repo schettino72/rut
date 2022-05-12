@@ -6,8 +6,16 @@ __all__ = ['check']
 def fixture(func):
     return func
 
-def use(name, fix):
+class Fixture:
+    def __init__(self, func, args, kwargs):
+        self.func = func
+        self.args = args
+        self.kwargs = kwargs
+
+def use(name, fix, *args, **kwargs):
     def deco(func):
-        func.use_fix = {name: fix}
+        if not hasattr(func, 'use_fix'):
+            func.use_fix = {}
+        func.use_fix[name] = Fixture(fix, args, kwargs)
         return func
     return deco

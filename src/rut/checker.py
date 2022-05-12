@@ -1,7 +1,7 @@
 from contextlib import contextmanager
 
 
-class TestFailure(Exception):
+class CheckFailure(Exception):
     """test assertion/check failure
 
     - args[0] str with Exception basic description
@@ -14,10 +14,10 @@ class TestFailure(Exception):
 
     # never used?
     # def __str__(self):
-    #     return f'TestFailure {self.args[0]} for value {self.val!r}.'
+    #     return f'CheckFailure {self.args[0]} for value {self.val!r}.'
 
 
-class CheckComparisonFailure(TestFailure):
+class CheckComparisonFailure(CheckFailure):
     """Check value against other
     """
     @property
@@ -30,7 +30,7 @@ class CheckEqualityFailure(CheckComparisonFailure):
     Usage: CheckEqualityFailure('Not Equal', 1, 2)
     """
     def __str__(self):
-        return (f'TestFailure - {self.args[0]}. '
+        return (f'CheckFailure - {self.args[0]}. '
                 f'Got => {self.val!r}, expected => {self.other!r}.')
 
 
@@ -61,7 +61,6 @@ class check:
         except expected_cls as exp:
             exc_info.raised = exp
         except Exception as exp:
-            raise TestFailure('Not the expected exception kind', expected_cls, exp)
+            raise CheckFailure('Not the expected exception kind', expected_cls, exp)
         else:
-            raise TestFailure('No exception raised', expected_cls)
-
+            raise CheckFailure('No exception raised', expected_cls)

@@ -19,12 +19,7 @@ log = logging.getLogger(__name__)
 
 
 class Collector:
-    """
-    1) find/load python modules
-
-    2) collect tests from module
-    3) select which tests cases will be executed
-    """
+    """find import python modules"""
     def __init__(self):
         # list of module name in dot notation i.e. `<pkg>.<name>`
         self.mods: list[str] = []
@@ -93,7 +88,7 @@ class Collector:
 
 
     def collect_by_name(self, name: str, mod_spec: Optional[ModuleSpec] = None):
-        """
+        """recurse pkg finding test modules
         """
         if not mod_spec:
             mod_spec = find_spec(name)
@@ -105,6 +100,8 @@ class Collector:
                     self.mods.append(f'{mod_spec.name}.{info.name}')
         else:
             self.mods.append(name)
+
+
 
 
 class Selector:

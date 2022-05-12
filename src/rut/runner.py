@@ -11,7 +11,7 @@ from rich.console import Console
 from rich.traceback import Traceback
 from rich.syntax import Syntax
 
-from .checker import TestFailure
+from .checker import CheckFailure
 from .case import FailureInfo, ErrorInfo
 from .case import TestCase, CaseOutcome
 from .collect import Selector
@@ -37,8 +37,8 @@ class Runner:
             # kwargs contain fixtures values for dependency injection
             kwargs = {}
             if case_fixtures := getattr(case.func, 'use_fix', None):
-                for name, fix_func in case_fixtures.items():
-                    fixtures[name] = fix_func()
+                for name, fix in case_fixtures.items():
+                    fixtures[name] = fix.func(*fix.args, **fix.kwargs)
                     kwargs[name] = next(fixtures[name])
 
             # TODO: stderr, logs
@@ -61,14 +61,14 @@ class Runner:
                 for name in fixtures.keys():
                     next(fixtures[name], None)  # should I check StopIteration was raised?
 
-        except TestFailure as failure:
+        except CheckFailure as failure:
             outcome.result = 'FAIL'
             outcome.io_out = case_out.getvalue()
             outcome.failure = FailureInfo.from_exception(failure)
         except Exception:
             outcome.result = 'ERROR'
             outcome.io_out = case_out.getvalue()
-            outcome.error = ErrorInfo.from_exception(sys.exc_info())  # type: ignore
+            outcome.error = ErrorInfo.from_exc_info(sys.exc_info())  # type: ignore
         else:
             outcome.result = 'SUCCESS'
         return outcome
