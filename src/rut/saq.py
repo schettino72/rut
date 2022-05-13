@@ -16,7 +16,7 @@ The protocol consists of:
   - Payload: variable length using msgpack
 """
 
-from typing import Any, AsyncIterator
+from typing import cast, Any, AsyncIterator
 import struct
 import asyncio
 
@@ -24,8 +24,6 @@ import msgpack  # type: ignore
 
 
 
-# python struct format:  char(MessageType) + unsigned int(payload length)
-MSG_FORMAT = '!BI'
 
 class MessageType:
     # master  -> worker
@@ -39,6 +37,20 @@ class MessageType:
     DONE = 103   # JOB is done, instruct master to send another job
 
 
+class Message:
+    # python struct format:  char(MessageType) + unsigned int(payload length)
+    FORMAT = '!BI'
+
+    @classmethod
+    def make_header(cls, _type: int, _len: int) -> bytes:
+        return struct.pack(cls.FORMAT, _type, _len)
+
+    @classmethod
+    def read_header(cls, header_data: bytes) -> tuple[int, int]:
+        header = struct.unpack(cls.FORMAT, header_data)
+        return cast(tuple[int, int], header)
+
+
 class Worker:
     """Manages communication on worker process"""
 
@@ -48,34 +60,41 @@ class Worker:
 
     def send_msg(self, payload: bytes):
         """send application message"""
-        self.outstream.write(struct.pack(MSG_FORMAT, MessageType.DATA, len(payload)))
+        self.outstream.write(Message.make_header(MessageType.DATA, len(payload)))
         self.outstream.write(payload)
         self.outstream.flush()
 
     def send_ctl(self, msg_type: int):
         """send a meta/control message i.e READY, DONE"""
-        self.outstream.write(struct.pack(MSG_FORMAT, msg_type, 0))
+        self.outstream.write(Message.make_header(msg_type, 0))
         self.outstream.flush()
 
-    def read_one(self) -> tuple[int, Any]:
-        """receive message from master"""
+    def read_one(self) -> tuple[int, bytes]:
+        """receive message from master
+
+        return raw data in bytes
+        """
         header_data = self.instream.read(5)
         if not header_data:
             raise EOFError('Worker process stdin has no more data.')
-        msg_type, payload_len = struct.unpack(MSG_FORMAT, header_data)
-        msg = msgpack.unpackb(self.instream.read(payload_len))
+        msg_type, payload_len = Message.read_header(header_data)
+        msg = self.instream.read(payload_len)
         return msg_type, msg
 
-    def recv_data(self):
-        """higher level generator to iterate only through received data."""
+    def recv_data(self) -> Any:
+        """higher level generator to iterate only through received data.
+
+        data is return as native python data
+        """
         while True:
             try:
                 msg_type, msg = self.read_one()
             except EOFError:
                 self.send_ctl(MessageType.DONE)
                 break
+            # TODO: handle STOP message
             assert msg_type == MessageType.JOB
-            yield msg
+            yield msgpack.unpackb(msg)
             # signal worker is ready to receive next task
             self.send_ctl(MessageType.READY)
 
@@ -87,28 +106,29 @@ class WorkerManager:
     - STDOUT must receive ONLY msgpack data
     """
     def __init__(self, name, process, detail=None):
-        self.name = name
-        self.detail = detail
-        self.process = process
-        self.running = True  # worker process not terminated yet
+        self.name: str = name
+        self.detail: str = detail
+        self.process: asyncio.Process = process
+        self.running: bool = True  # worker process not terminated yet
         self._read_stdout: asyncio.Task[str] = None
 
     async def _read_pack(self):
         """read msgpack stream"""
         stream = self.process.stdout
-        header_data = await stream.readexactly(5)
-        if not header_data:
-            return None, None  # EOF
-        msg_type, payload_len = struct.unpack(MSG_FORMAT, header_data)
+        try:
+            header_data = await stream.readexactly(5)
+        except asyncio.IncompleteReadError:
+            return None, None
+        msg_type, payload_len = Message.read_header(header_data)
         if payload_len:
             payload = await stream.readexactly(payload_len)
             msg = msgpack.unpackb(payload)
         else:
-            msg = b''
+            msg = None
         return msg_type, msg
 
     @property
-    def create_read_task(self):
+    def _read_task(self):
         """GET or create task/awaitable for StreamReader"""
         if not self._read_stdout:
             self._read_stdout = asyncio.create_task(self._read_pack(), name=self.name)
@@ -122,11 +142,11 @@ class WorkerManager:
 
 
     def _write_pack(self, msg_type, payload):
-        transport = self.process.stdin._transport
-        transport.write(struct.pack(MSG_FORMAT, msg_type, len(payload)))
+        transport: asyncio.WriteTransport = self.process.stdin._transport
+        transport.write(Message.make_header(msg_type, len(payload)))
         transport.write(payload)
 
-    def send_job(self, data):
+    def send_job(self, data: Any):
         payload = msgpack.packb(data)
         self._write_pack(MessageType.JOB, payload)
 
@@ -135,12 +155,13 @@ class WorkerManager:
 class Master:
     """Manages multiple worker processes
 
-    - exec()
+    - exec() start worker process
+    - recv_worker_msgs() iter through received msgs from all workers
     """
     def __init__(self):
         self.workers: dict[str: WorkerManager] = {}
 
-    async def exec(self, name: str, command: str) -> WorkerManager:
+    async def add_worker(self, name: str, command: str) -> WorkerManager:
         """Create subprocess and wrap into WorkerManager"""
         proc = await asyncio.create_subprocess_exec(
             *command.split(),
@@ -158,11 +179,11 @@ class Master:
 
         Similar to a socket select()
         """
-        while wait_for := [w.create_read_task for w in self.workers.values() if w.running]:
+        while wait_for := [w._read_task for w in self.workers.values() if w.running]:
             done, _ = await asyncio.wait(wait_for, return_when=asyncio.FIRST_COMPLETED)
             for tdone in done:
                 worker = self.workers[tdone.get_name()]
                 msg_type, data = worker.get_data()
-                if msg_type == MessageType.DONE:
+                if msg_type == MessageType.DONE or msg_type is None:
                     worker.running = False
                 yield (worker, msg_type, data)

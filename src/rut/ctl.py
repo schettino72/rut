@@ -25,7 +25,7 @@ def single_worker(collector, exitfirst):
 
 async def mp_master(collector, np):
     """master process when using multiple processes"""
-    manager = Master()
+    master = Master()
 
     # a testing module is the minimum unit sent as a job to workers
     mods = collector.mods[:]
@@ -33,13 +33,15 @@ async def mp_master(collector, np):
     for wid in range(np):
         mod = mods.pop(0)
         if mod:
-            work_mgr = await manager.exec(f't{wid}', f'rut --worker --imp {imp_spec}')
+            work_mgr = await master.add_worker(f't{wid}', f'rut --worker --imp {imp_spec}')
             log.info('MASTER send job %s', mod)
             work_mgr.send_job(mod)
 
     reporter = Reporter()
-    async for work_mgr, msg_type, msg in manager.recv_worker_msgs():
+    async for work_mgr, msg_type, msg in master.recv_worker_msgs():
         log.info('MASTER got %s', msg_type)
+
+        # worker is READY: send another job
         if msg_type == MessageType.READY:
             if mods:
                 mod = mods.pop(0)
@@ -51,14 +53,14 @@ async def mp_master(collector, np):
                 work_mgr.process.stdin.close()
             continue
 
+        # got some data/output from worker
         if msg_type == MessageType.DATA:
             outcome = CaseOutcome.from_data(msg)
             reporter.handle_outcome(outcome)
             continue
 
+        # worker is DONE: do any cleanup necessary
         assert msg_type == MessageType.DONE
-        # print(f'[{work_mgr.name}] DONE')
-
         # print captured/piped stderr from subprocess - currently not being piped
         if work_mgr.process.stderr:  # pragma: no cover
             err = await work_mgr.process.stderr.read()
@@ -68,7 +70,6 @@ async def mp_master(collector, np):
                 print(err.decode().rstrip())
                 print('===================================')
                 print(f'[{work_mgr.name}] ERROR')
-    # print('all done')
     return 0
 
 
