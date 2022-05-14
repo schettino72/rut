@@ -45,11 +45,11 @@ async def mp_master(collector, np):
     master = Master()
 
     # a testing module is the minimum unit sent as a job to workers
-    mods = collector.mods[:]
-    assert len(collector.specs[0]) == 1
+    mods = list(reversed(collector.mods))
+    assert len(collector.specs) == 1
     imp_spec = '|'.join(collector.specs[0])
     for wid in range(np):
-        mod = mods.pop(0)
+        mod = mods.pop()
         if mod:
             work_mgr = await master.add_worker(f't{wid}', f'rut --worker --imp {imp_spec}')
             log.info('MASTER send job %s', mod)
@@ -62,12 +62,12 @@ async def mp_master(collector, np):
         # worker is READY: send another job
         if msg_type == MessageType.READY:
             if mods:
-                mod = mods.pop(0)
+                mod = mods.pop()
                 log.info('MASTER send job %s', mod)
                 work_mgr.send_job(mod)
             else:
                 # closing stdin signals the process to terminate
-                log.info('MASTER closing stdin')
+                log.info('MASTER closing stdin to {work_mgr.name}')
                 work_mgr.process.stdin.close()
             continue
 

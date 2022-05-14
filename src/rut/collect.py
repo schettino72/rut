@@ -26,6 +26,9 @@ class Collector:
         self.specs = []
         self.all_tests = True  # executing all tests
 
+    def __repr__(self):
+        return f'Collector(specs={self.specs}, mods={self.mods})'
+
     @staticmethod
     def import_spec(name, fn):
         """import module given file_location spec args"""
