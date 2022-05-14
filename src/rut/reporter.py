@@ -15,6 +15,7 @@ class Reporter:
     def handle_outcome(self, outcome):
         print = self.console.print
         if outcome.result == 'FAIL':
+            print(f"{outcome.mod_name}::{outcome.case_name}: [red]ERROR[/red]")
             assert outcome.failure
             self._print_failure(outcome.case_name, outcome.failure)
             if outcome.io_out:
@@ -23,7 +24,8 @@ class Reporter:
             # FIXME: suppress by module name does not work
             assert outcome.error
             traceback = Traceback(outcome.error.trace, show_locals=True)
-            self.console.print(traceback)
+            print(f"{outcome.mod_name}::{outcome.case_name}: [red]ERROR[/red]")
+            print(traceback)
         elif outcome.result == 'SUCCESS':
             print(f"{outcome.mod_name}::{outcome.case_name}: [green]OK[/green]")
         else:  # pragma: no cover
@@ -36,7 +38,7 @@ class Reporter:
         console.print()
         console.rule(f"[bold red]{case_name}", style="red")
         for frame in failure.stack:
-            console.print(f"{frame['filename']}:{frame['lineno']}: {failure.name}")
+            console.print(f"{frame['filename']}:{frame['lineno']}")
 
             # find function object referred by the frame
             module = importlib.import_module(frame['module'])
@@ -68,4 +70,5 @@ class Reporter:
                 pass
         for arg in failure.args[1:]:
             console.print(repr(arg))
+        print(f"{failure.name}: {failure.desc}")
         console.rule(style="bright_black", characters="━")

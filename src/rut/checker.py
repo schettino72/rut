@@ -34,6 +34,12 @@ class CheckEqualityFailure(CheckComparisonFailure):
                 f'Got => {self.val!r}, expected => {self.other!r}.')
 
 
+class CheckContainsFailure(CheckFailure):
+    pass
+
+class CheckRaiseFailure(CheckFailure):
+    pass
+
 
 
 class ExpectedException:
@@ -45,12 +51,22 @@ class ExpectedException:
 class check:
     def __init__(self, val):
         self.val = val
-        self._used = False
 
     def __eq__(self, other):
-        self._used = True
         if self.val != other:
             raise CheckEqualityFailure("Not equal", self.val, other)
+
+    def __contains__(self, other):
+        raise NotImplementedError("`in` operator can not be used on check().",
+                                  "Use `contains()` / `not_contains()` instead.")
+
+    def contains(self, other):
+        if other not in self.val:
+            raise CheckContainsFailure("Does not contain", self.val, other)
+
+    def not_contains(self, other):
+        if other in self.val:
+            raise CheckContainsFailure("Unexpected contains", self.val, other)
 
     @contextmanager
     @staticmethod
@@ -61,9 +77,9 @@ class check:
         except expected_cls as exp:
             exc_info.raised = exp
         except Exception as exp:
-            raise CheckFailure('Not the expected exception kind', expected_cls, exp)
+            raise CheckRaiseFailure('Not the expected exception kind', expected_cls, exp)
         else:
-            raise CheckFailure('No exception raised', expected_cls)
+            raise CheckRaiseFailure('No exception raised', expected_cls)
 
 
     # str methods

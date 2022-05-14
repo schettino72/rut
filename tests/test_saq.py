@@ -57,7 +57,7 @@ class TestWorker:
 
 class TestMaster:
     async def test_master(self):
-        dumb_worker_fn = str(Path(__file__).parent / 'dumb.py')
+        dumb_worker_fn = str(Path(__file__).parent / 'sample_proj/dumb.py')
         master = saq.Master()
         work_mgr1 = await master.add_worker('t1', f"python {dumb_worker_fn}")
         work_mgr1.send_job(b'one')

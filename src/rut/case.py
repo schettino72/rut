@@ -18,9 +18,10 @@ from .checker import CheckFailure
 
 class FailureInfo:
     """save information of a check failure"""
-    def __init__(self, name, args, stack):
+    def __init__(self, name, args, desc, stack):
         self.name = name
         self.args = args
+        self.desc = desc
         self.stack = stack
 
     @classmethod
@@ -30,6 +31,7 @@ class FailureInfo:
         while tb:
             frame = tb.tb_frame
             tb = tb.tb_next
+            # FIXME: check.raises has a contextlib frame that should be hidden.
             if frame.f_globals['__package__'] == 'rut':
                 continue
             code = frame.f_code
@@ -40,7 +42,7 @@ class FailureInfo:
                 'lineno': frame.f_lineno,
                 'firstlineno': code.co_firstlineno,
             })
-        return cls(exc.__class__.__name__, exc.args, stack)
+        return cls(exc.__class__.__name__, exc.args, str(exc), stack)
 
 ExceptionInfo = NewType('ExceptionInfo',
                         tuple[Type[BaseException], BaseException, TracebackType])

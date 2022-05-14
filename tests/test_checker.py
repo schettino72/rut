@@ -14,6 +14,26 @@ class TestCheckerEq:
         check(str(exc_info.raised)) == 'CheckFailure - Not equal. Got => 1, expected => 2.'
 
 
+class TestContains:
+    def test_contains_true(self):
+        check([1, 2, 3]).contains(1)
+
+    def test_contains_false(self):
+        with check.raises(checker.CheckContainsFailure):
+            check([1, 2, 3]).contains(5)
+
+    def test_not_contains_true(self):
+        check([1, 2, 3]).not_contains(5)
+
+    def test_not_contains_false(self):
+        with check.raises(checker.CheckContainsFailure):
+            check([1, 2, 3]).not_contains(1)
+
+    def test_in_not_implemented(self):
+        with check.raises(NotImplementedError):
+            1 in check([1, 2, 3])
+
+
 class TestCheckerRaise:
     def test_raises_pass(self):
         class CustomException(Exception):
@@ -61,3 +81,4 @@ class TestChecker_HasLine:
     def test_fail(self):
         with check.raises(checker.CheckFailure):
             check('They say\nYou say\n').has_line('They')
+

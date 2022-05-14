@@ -23,12 +23,30 @@ def single_worker(collector, exitfirst):
     return 0
 
 
+# echo -ne '\x01\x00\x00\x00\x13\xb2tests.test_collect\x01\x00\x00\x00\x12\xb1tests.test_runner' # noqa
+#          | rut --worker --imp 'tests|tests/__init__.py'
+def mp_worker(imp_spec, in_stream=None, out_stream=None):
+    """worker process when using multiple processes"""
+    worker_in = in_stream if in_stream else sys.stdin.buffer
+    worker_out = out_stream if out_stream else sys.stdout.buffer
+    worker = Worker(worker_in, worker_out)
+    imp_name, imp_path = imp_spec.split('|')
+    Collector.import_spec(imp_name, imp_path)
+    runner = Runner()
+    for msg in worker.recv_data():
+        selector = Selector([msg])
+        for outcome in runner.execute(selector):
+            worker.send_msg(outcome.pack())
+    return 0
+
+
 async def mp_master(collector, np):
     """master process when using multiple processes"""
     master = Master()
 
     # a testing module is the minimum unit sent as a job to workers
     mods = collector.mods[:]
+    assert len(collector.specs[0]) == 1
     imp_spec = '|'.join(collector.specs[0])
     for wid in range(np):
         mod = mods.pop(0)
@@ -72,18 +90,3 @@ async def mp_master(collector, np):
                 print(f'[{work_mgr.name}] ERROR')
     return 0
 
-
-
-# echo -ne '\x01\x00\x00\x00\x13\xb2tests.test_collect\x01\x00\x00\x00\x12\xb1tests.test_runner' # noqa
-#          | rut --worker --imp 'tests|tests/__init__.py'
-def mp_worker(imp_spec):
-    """worker process when using multiple processes"""
-    worker = Worker(sys.stdin.buffer, sys.stdout.buffer)
-    imp_name, imp_path = imp_spec.split('|')
-    Collector.import_spec(imp_name, imp_path)
-    runner = Runner()
-    for msg in worker.recv_data():
-        selector = Selector([msg])
-        for outcome in runner.execute(selector):
-            worker.send_msg(outcome.pack())
-    return 0
