@@ -59,10 +59,15 @@ class TestCollector:
         check(col.mods) == ['proj_inplace.test_foo']
 
     def test_guess_dir(self):
-        with chdir(SAMPLE_PROJ_ROOT / 'proj_split'):
-            col = Collector()
-            col.process_args([])
-            check(col.mods) == ['tests.test_foo']
+        tests_pkg = sys.modules.pop('tests')
+        try:
+            with chdir(SAMPLE_PROJ_ROOT / 'proj_split'):
+                col = Collector()
+                col.process_args([])
+                check(col.mods) == ['tests.test_foo']
+        finally:
+            # make sure this test does not mess-up with imports rut itself.
+            sys.modules['tests'] = tests_pkg
 
 
 class TestSelectCases:

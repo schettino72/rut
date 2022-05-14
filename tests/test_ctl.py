@@ -1,7 +1,6 @@
 import io
 from contextlib import redirect_stdout
 from pathlib import Path
-import asyncio
 
 import msgpack
 from rut import check

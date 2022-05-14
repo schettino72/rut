@@ -17,9 +17,11 @@ log = logging.getLogger('rut')
 @click.option('--log-show', default=False, is_flag=True,
               help='show logs on stdout/terminal')
 # reporting
-# runner
-@click.option('-s', 'capture', flag_value='no', default='sys',
+# capture
+@click.option('--capture', 'capture', default='sys', type=click.Choice(['sys', 'no']),
               help='capture of test stdout/stderr')
+@click.option('-s', 'capture_no', default=False, is_flag=True)
+# runner
 @click.option('-x', '--exitfirst', default=False, is_flag=True,
               help='exit instantly on first error or failed test.')
 # worker
@@ -31,7 +33,7 @@ log = logging.getLogger('rut')
 # collection / selection
 @click.argument('args', nargs=-1, metavar='TESTS')
 def main(args, log_show,
-         capture, exitfirst,
+         capture, capture_no, exitfirst,
          num_proc, is_worker, imp):
     """run unittest tests
 
@@ -48,6 +50,8 @@ def main(args, log_show,
     if is_worker:
         return mp_worker(imp)
 
+    if capture_no:
+        capture = 'no'
     collector = Collector()
     collector.process_args(args)
     if num_proc:
