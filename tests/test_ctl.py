@@ -62,13 +62,13 @@ class TestSubWorker:
 
 
 class TestMaster:
-    def test_run_all(self):
+    async def test_run_all(self):
         col = Collector()
         pkg_path = str(SAMPLE_PROJ_ROOT / 'proj_inplace')
         col.process_args([pkg_path])
 
         rut_out = io.StringIO()
         with redirect_stdout(rut_out):
-            asyncio.run(ctl.mp_master(col, np=1))
+            await ctl.mp_master(col, np=1)
         check(rut_out.getvalue()).has_line('proj_inplace.test_bar::test_bar: ERROR')
         check(rut_out.getvalue()).has_line('proj_inplace.test_foo::TestClass.test_abc: OK')

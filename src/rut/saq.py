@@ -187,3 +187,6 @@ class Master:
                 if msg_type == MessageType.DONE or msg_type is None:
                     worker.running = False
                 yield (worker, msg_type, data)
+        # wait for worker to be terminated cleanly
+        for worker in self.workers.values():
+            await worker.process.wait()
