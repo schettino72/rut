@@ -11,11 +11,11 @@ from .reporter import Reporter
 log = logging.getLogger(__name__)
 
 
-def single_worker(collector, exitfirst):
+def single_worker(collector, *, capture='sys', exitfirst=False):
     """run all test cases in a single process"""
     selector = Selector(collector.mods)
     reporter = Reporter()
-    runner = Runner()
+    runner = Runner(capture)
     for outcome in runner.execute(selector):
         reporter.handle_outcome(outcome)
         if exitfirst and outcome.result in ('ERROR', 'FAIL'):
@@ -51,7 +51,8 @@ async def mp_master(collector, np):
     for wid in range(np):
         mod = mods.pop()
         if mod:
-            work_mgr = await master.add_worker(f't{wid}', f'rut --worker --imp {imp_spec}')
+            cmd = f'rut --worker --imp {imp_spec}'
+            work_mgr = await master.add_worker(f't{wid}', cmd)
             log.info('MASTER send job %s', mod)
             work_mgr.send_job(mod)
 
@@ -89,4 +90,3 @@ async def mp_master(collector, np):
                 print('===================================')
                 print(f'[{work_mgr.name}] ERROR')
     return 0
-

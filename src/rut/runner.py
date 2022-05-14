@@ -3,7 +3,7 @@ import sys
 import inspect
 import logging
 import asyncio
-from contextlib import redirect_stdout
+from contextlib import nullcontext, redirect_stdout
 from collections import defaultdict
 
 from .checker import CheckFailure
@@ -17,13 +17,12 @@ log = logging.getLogger(__name__)
 
 
 class Runner:
-    def __init__(self):
+    def __init__(self, capture='sys'):
         # mod_name -> test_name: outcome
         self.outcomes: dict[str, dict[str, CaseOutcome]] = defaultdict(dict)
+        self.capture: str = capture  # supports: sys, no
 
-
-    @staticmethod
-    def run_case(mod_name: str, case_name: str, case: TestCase) -> CaseOutcome:
+    def run_case(self, mod_name: str, case_name: str, case: TestCase) -> CaseOutcome:
         """run a single TestCase, returns a CaseOutcome"""
         fixtures = {}
         case_out = io.StringIO()
@@ -37,7 +36,7 @@ class Runner:
                     kwargs[name] = next(fixtures[name])
 
             # TODO: stderr, logs
-            with redirect_stdout(case_out):
+            with redirect_stdout(case_out) if self.capture == 'sys' else nullcontext():
                 is_coro = inspect.iscoroutinefunction(case.func)
                 if case.cls:
                     obj = case.cls()

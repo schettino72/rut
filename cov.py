@@ -23,7 +23,7 @@ def cov_wrapper(args):
     from rut.__main__ import single_worker
     collector = Collector()
     collector.process_args(args)
-    single_worker(collector, False)
+    single_worker(collector)
 
     cov.stop()
     cov.save()

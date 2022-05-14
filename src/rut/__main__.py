@@ -18,6 +18,8 @@ log = logging.getLogger('rut')
               help='show logs on stdout/terminal')
 # reporting
 # runner
+@click.option('-s', 'capture', flag_value='no', default='sys',
+              help='capture of test stdout/stderr')
 @click.option('-x', '--exitfirst', default=False, is_flag=True,
               help='exit instantly on first error or failed test.')
 # worker
@@ -28,7 +30,8 @@ log = logging.getLogger('rut')
 @click.option('--imp', help='import spec <pkg>|<path> i.e. "tests|tests/__init__.py"')
 # collection / selection
 @click.argument('args', nargs=-1, metavar='TESTS')
-def main(args, log_show, exitfirst,
+def main(args, log_show,
+         capture, exitfirst,
          num_proc, is_worker, imp):
     """run unittest tests
 
@@ -49,7 +52,7 @@ def main(args, log_show, exitfirst,
     collector.process_args(args)
     if num_proc:
         return asyncio.run(mp_master(collector, num_proc))
-    return single_worker(collector, exitfirst)
+    return single_worker(collector, capture=capture, exitfirst=exitfirst)
 
 if __name__ == '__main__':
     main()
