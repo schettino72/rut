@@ -60,6 +60,7 @@ class TestMyClass:
         check(runner.outcomes['this_test']['TestMyClass.test_moo'].result) == 'SUCCESS'
 
 
+class TestFixtures:
     def test_fixture(self):
         src = """
 from rut import check, use
@@ -68,6 +69,22 @@ def my_fixture(arg):
     yield arg
 
 @use('five', my_fixture, 5)
+def test_fix(five):
+    check(five) == 5
+"""
+        selector = Selector()
+        add_test_cases(selector, src)
+        runner = run_all(selector)
+        check(runner.outcomes['this_test']['test_fix'].result) == 'SUCCESS'
+
+    def test_fixture_implicit_name(self):
+        src = """
+from rut import check, use
+
+def five(arg):
+    yield arg
+
+@use(five, 5)
 def test_fix(five):
     check(five) == 5
 """
