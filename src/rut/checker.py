@@ -60,6 +60,10 @@ class check:
         raise NotImplementedError("`in` operator can not be used on check().",
                                   "Use `contains()` / `not_contains()` instead.")
 
+    def is_(self, other):
+        if self.val is not other:
+            raise CheckFailure("Not Same", self.val, other)
+
     def contains(self, other):
         if other not in self.val:
             raise CheckContainsFailure("Does not contain", self.val, other)

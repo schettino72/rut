@@ -3,6 +3,14 @@ from rut import check
 from rut import checker
 
 
+class TestCheckerIs:
+    def test_is(self):
+        check(True).is_(True)
+
+    def test_eq_fail(self):
+        with check.raises(checker.CheckFailure):
+            check(2).is_(True)
+
 class TestCheckerEq:
     def test_eq_ok(self):
         check(3) == 3
