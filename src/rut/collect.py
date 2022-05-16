@@ -120,14 +120,14 @@ class Selector:
 
         # load functions
         for name, ref in inspect.getmembers(module, inspect.isfunction):
-            if name.startswith('test_'):
+            if name.startswith('test'):
                 tests[ref.__qualname__] = TestCase(ref)
 
         # load class methods
         for cls_name, cls_ref in inspect.getmembers(module, inspect.isclass):
             if cls_name.startswith('Test'):
                 for name, ref in inspect.getmembers(cls_ref, inspect.isfunction):
-                    if name.startswith('test_'):
+                    if name.startswith('test'):
                         tests[ref.__qualname__] = TestCase(ref, cls=cls_ref)
         return tests
 

@@ -68,7 +68,7 @@ async def mp_master(collector, np):
                 work_mgr.send_job(mod)
             else:
                 # closing stdin signals the process to terminate
-                log.info('MASTER closing stdin to {work_mgr.name}')
+                log.info(f'MASTER closing stdin to {work_mgr.name}')
                 work_mgr.process.stdin.close()
             continue
 
