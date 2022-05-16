@@ -49,6 +49,8 @@ async def mp_master(collector, np):
     assert len(collector.specs) == 1
     imp_spec = '|'.join(collector.specs[0])
     for wid in range(np):
+        if not mods:
+            break  # less jobs than requests workers
         mod = mods.pop()
         if mod:
             cmd = f'rut --worker --imp {imp_spec}'
