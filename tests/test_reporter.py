@@ -31,6 +31,20 @@ def test_print():
         check(runner_out.getvalue()) == 'this_test::test_print: OK\n'
 
 
+    def test_capture_stderr(self):
+        selector = Selector()
+        src ="""
+import sys
+def test_print():
+    sys.stderr.write('IGNORE STDERR')
+"""
+        add_test_cases(selector, src)
+        runner_out = io.StringIO()
+        with redirect_stdout(runner_out):
+            run_all(selector)
+        check(runner_out.getvalue()) == 'this_test::test_print: OK\n'
+
+
     def test_failure_output_stderr(self):
         selector = Selector()
         src ="""
@@ -44,7 +58,7 @@ def test_print():
         with redirect_stdout(runner_out):
             run_all(selector)
         got = runner_out.getvalue()
-        assert 'CLUE-HERE' in got
+        check(got).contains('CLUE-HERE')
 
 
     def test_error(self):

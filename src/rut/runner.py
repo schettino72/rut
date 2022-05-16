@@ -3,7 +3,7 @@ import sys
 import inspect
 import logging
 import asyncio
-from contextlib import nullcontext, redirect_stdout
+from contextlib import contextmanager, nullcontext, redirect_stdout, redirect_stderr
 from collections import defaultdict
 
 from .checker import CheckFailure
@@ -15,6 +15,10 @@ from .collect import Selector
 log = logging.getLogger(__name__)
 
 
+@contextmanager
+def capsys(case_out, case_err):
+    with redirect_stdout(case_out), redirect_stderr(case_err):
+        yield
 
 class Runner:
     def __init__(self, capture='sys'):
@@ -26,6 +30,7 @@ class Runner:
         """run a single TestCase, returns a CaseOutcome"""
         fixtures = {}
         case_out = io.StringIO()
+        case_err = io.StringIO()
         outcome = CaseOutcome(mod_name, case_name)
         try:
             # kwargs contain fixtures values for dependency injection
@@ -35,8 +40,8 @@ class Runner:
                     fixtures[name] = fix.func(*fix.args, **fix.kwargs)
                     kwargs[name] = next(fixtures[name])
 
-            # TODO: stderr, logs
-            with redirect_stdout(case_out) if self.capture == 'sys' else nullcontext():
+            # TODO: logs
+            with capsys(case_out, case_err) if self.capture=='sys' else nullcontext():
                 is_coro = inspect.iscoroutinefunction(case.func)
                 if case.cls:
                     obj = case.cls()
