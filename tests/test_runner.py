@@ -63,8 +63,9 @@ class TestMyClass:
 class TestFixtures:
     def test_fixture(self):
         src = """
-from rut import check, use
+from rut import check, fixture, use
 
+@fixture
 def my_fixture(arg):
     yield arg
 
@@ -79,8 +80,9 @@ def test_fix(five):
 
     def test_fixture_implicit_name(self):
         src = """
-from rut import check, use
+from rut import check, fixture, use
 
+@fixture
 def five(arg):
     yield arg
 
@@ -92,6 +94,27 @@ def test_fix(five):
         add_test_cases(selector, src)
         runner = run_all(selector)
         check(runner.outcomes['this_test']['test_fix'].result) == 'SUCCESS'
+
+
+    def test_parametrized(self):
+        src = """
+from rut import check, fixture, use
+
+@fixture(params=[1, 2])
+def my_fixture(param):
+    yield param
+
+@use('number', my_fixture)
+def test_param_fix(number):
+    check(number) == number
+"""
+        selector = Selector()
+        add_test_cases(selector, src)
+        runner = run_all(selector)
+        print(runner.outcomes)
+        check(len(runner.outcomes['this_test'])) == 2
+        check(runner.outcomes['this_test']['test_param_fix[1]'].result) == 'SUCCESS'
+        check(runner.outcomes['this_test']['test_param_fix[2]'].result) == 'SUCCESS'
 
 
 

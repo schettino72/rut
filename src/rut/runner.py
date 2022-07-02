@@ -21,27 +21,28 @@ def capsys(case_out, case_err):
         yield
 
 class Runner:
+    """manages running a tests and producing TestOutcome.
+
+    It has no knowledge of mutli-processing. On MP, One instance per test module.
+    """
     def __init__(self, capture='sys'):
         # mod_name -> test_name: outcome
+        # FIXME: should not save outcomes
         self.outcomes: dict[str, dict[str, CaseOutcome]] = defaultdict(dict)
         self.capture: str = capture  # supports: sys, no
 
-    def run_case(self, mod_name: str, case_name: str, case: TestCase) -> CaseOutcome:
+    def run_case(self,
+                 mod_name: str,
+                 case_name: str,
+                 case: TestCase,
+                 kwargs: dict) -> CaseOutcome:
         """run a single TestCase, returns a CaseOutcome"""
-        fixtures = {}
         case_out = io.StringIO()
         case_err = io.StringIO()
         outcome = CaseOutcome(mod_name, case_name)
         try:
-            # kwargs contain fixtures values for dependency injection
-            kwargs = {}
-            if case_fixtures := getattr(case.func, 'use_fix', None):
-                for name, fix in case_fixtures.items():
-                    fixtures[name] = fix.func(*fix.args, **fix.kwargs)
-                    kwargs[name] = next(fixtures[name])
-
             # TODO: logs
-            with capsys(case_out, case_err) if self.capture=='sys' else nullcontext():
+            with capsys(case_out, case_err) if self.capture == 'sys' else nullcontext():
                 is_coro = inspect.iscoroutinefunction(case.func)
                 if case.cls:
                     obj = case.cls()
@@ -54,11 +55,6 @@ class Runner:
                         asyncio.run(case.func(**kwargs))
                     else:
                         case.func(**kwargs)
-
-            # fixture cleanup
-            if fixtures:
-                for name in fixtures.keys():
-                    next(fixtures[name], None)  # should I check StopIteration was raised?
 
         except CheckFailure as failure:
             outcome.result = 'FAIL'
@@ -75,8 +71,40 @@ class Runner:
 
     def execute(self, selector: Selector):
         """execute tests"""
-        for mod_name, case_name, case in selector.iter_cases():
-            log.info('run %s::%s' % (mod_name, case_name))
-            outcome = self.run_case(mod_name, case_name, case)
-            self.outcomes[mod_name][case_name] = outcome
-            yield outcome
+        for mod_name, base_name, case in selector.iter_cases():
+            log.info('run %s::%s' % (mod_name, base_name))
+
+            # manage fixtures
+            # kwargs contain fixtures values for dependency injection
+            kwargs = {}
+            if case_fixtures := getattr(case.func, 'use_fix', None):
+                fix_in_use = {}
+                for name, fix in case_fixtures.items():
+                    # TODO: friendly error message if @use is passed a non-fixture
+                    assert fix.func.rut_scope == 'function'
+                    # None indicates no parametrization
+                    for param in (fix.params or [None]):
+                        fix_kwargs = fix.kwargs.copy()
+                        if param is not None:
+                            fix_kwargs['param'] = param
+                            case_name = f'{base_name}[{param}]'
+                        else:
+                            case_name = base_name
+                        fix_in_use[name] = fix.func(*fix.args, **fix_kwargs)
+                        kwargs[name] = next(fix_in_use[name])
+
+                        outcome = self.run_case(mod_name, case_name, case, kwargs)
+
+                        # fixture cleanup
+                        if fix_in_use:
+                            for name in fix_in_use.keys():
+                                # should I check StopIteration was raised?
+                                next(fix_in_use[name], None)
+
+                        self.outcomes[mod_name][case_name] = outcome
+                        yield outcome
+
+            else:  # no fixtures - FIXME: DRY
+                outcome = self.run_case(mod_name, base_name, case, kwargs)
+                self.outcomes[mod_name][base_name] = outcome
+                yield outcome
