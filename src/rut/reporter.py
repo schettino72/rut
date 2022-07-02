@@ -28,6 +28,8 @@ class Reporter:
             print(traceback)
         elif outcome.result == 'SUCCESS':
             print(f"{outcome.mod_name}::{outcome.case_name}: [green]OK[/green]")
+        elif outcome.result == 'SKIPPED':
+            print(f"{outcome.mod_name}::{outcome.case_name}: [yellow]SKIPPED[/yellow]")
         else:  # pragma: no cover
             raise NotImplementedError()
 

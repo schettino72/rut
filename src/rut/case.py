@@ -16,6 +16,14 @@ from rich import traceback as rich_tb
 from .checker import CheckFailure
 
 
+class SkippedTest(Exception):
+    def __init__(self, reason):
+        self.reason = reason
+
+
+def skip_test(reason):
+    raise SkippedTest(reason)
+
 class FailureInfo:
     """save information of a check failure"""
     def __init__(self, name, args, desc, stack):
@@ -137,18 +145,18 @@ class MsgpackMixin:
         return cls.from_data(raw)
 
 
-RESULTS = ('SUCCESS', 'FAIL', 'ERROR')
+RESULTS = ('SUCCESS', 'FAIL', 'ERROR', 'SKIPPED')
 
 class CaseOutcome(MsgpackMixin):
     def __init__(self, mod_name, case_name):
         self.mod_name = mod_name
         self.case_name = case_name
         # exec-phase
-        self.result = None  # SUCCESS, FAIL, ERROR
+        self.result = None  # RESULTS
         self.io_out: Optional[str] = None              # never set if SUCESS
         self.failure: Optional[FailureInfo] = None     # set if FAIL
         self.error: Optional[ErrorInfo] = None  # set if ERROR
-
+        self.skip: Optional[str] = None  # skip reason
 
 
 class TestCase:

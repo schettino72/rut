@@ -7,7 +7,7 @@ from contextlib import contextmanager, nullcontext, redirect_stdout, redirect_st
 from collections import defaultdict
 
 from .checker import CheckFailure
-from .case import FailureInfo, ErrorInfo
+from .case import FailureInfo, ErrorInfo, SkippedTest
 from .case import TestCase, CaseOutcome
 from .collect import Selector
 
@@ -60,6 +60,10 @@ class Runner:
             outcome.result = 'FAIL'
             outcome.io_out = case_out.getvalue()
             outcome.failure = FailureInfo.from_exception(failure)
+        except SkippedTest as skipped:
+            outcome.result = 'SKIPPED'
+            outcome.io_out = case_out.getvalue()
+            outcome.skip = skipped.reason
         except Exception:
             outcome.result = 'ERROR'
             outcome.io_out = case_out.getvalue()
@@ -87,7 +91,8 @@ class Runner:
                         fix_kwargs = fix.kwargs.copy()
                         if param is not None:
                             fix_kwargs['param'] = param
-                            case_name = f'{base_name}[{param}]'
+                            param_name = getattr(param, '__name__', str(param))
+                            case_name = f'{base_name}[{param_name}]'
                         else:
                             case_name = base_name
                         fix_in_use[name] = fix.func(*fix.args, **fix_kwargs)

@@ -72,3 +72,17 @@ def test_no():
         with redirect_stdout(runner_out):
             run_all(selector)
         check(runner_out.getvalue()).has_line('ZeroDivisionError: division by zero')
+
+
+    def test_skip(self):
+        selector = Selector()
+        src ="""
+from rut import skip_test
+def test_skip():
+    skip_test('skip reason')
+"""
+        add_test_cases(selector, src)
+        runner_out = io.StringIO()
+        with redirect_stdout(runner_out):
+            run_all(selector)
+        check(runner_out.getvalue()).has_line('this_test::test_skip: SKIPPED')

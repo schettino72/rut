@@ -143,3 +143,15 @@ def test_one():
         add_test_cases(selector, src)
         runner = run_all(selector)
         check(runner.outcomes['this_test']['test_one'].result) == 'FAIL'
+
+
+    def test_skip(self):
+        selector = Selector()
+        src = """
+from rut import skip_test
+def test_skip():
+    skip_test('the reason')
+"""
+        add_test_cases(selector, src)
+        runner = run_all(selector)
+        check(runner.outcomes['this_test']['test_skip'].result) == 'SKIPPED'

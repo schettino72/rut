@@ -16,10 +16,19 @@ Experimental stuff... come back later.
 Use stdlib context managers instead of pytest fixtures:
 
 tmpdir -> tempfile
+
 capsys -> contextlib.redirect_stdout
+
 monkeypatch -> unittest.mock.patch
 
+```
+monkeypatch.setattr(DbmDB, 'DBM_CONTENT_ERROR_MSG', 'xxx')
+```
 
+```
+from unitttest.mock import patch
+patch.object(DbmDB, 'DBM_CONTENT_ERROR_MSG', 'xxx')
+```
 
 
 ## Development

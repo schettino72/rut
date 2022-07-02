@@ -1,4 +1,5 @@
 from .checker import check
+from .case import skip_test
 
 __all__ = ['check']
 
