@@ -3,6 +3,7 @@ import sys
 import inspect
 import logging
 import asyncio
+import itertools
 from contextlib import contextmanager, nullcontext, redirect_stdout, redirect_stderr
 from collections import defaultdict
 
@@ -19,6 +20,23 @@ log = logging.getLogger(__name__)
 def capsys(case_out, case_err):
     with redirect_stdout(case_out), redirect_stderr(case_err):
         yield
+
+
+# https://stackoverflow.com/a/40623158/64444
+def parametrization_product(params):
+    """
+    >>> list(parametrization_product(dict(number=[1,2], character='ab')))
+    [{'character': 'a', 'number': 1},
+     {'character': 'a', 'number': 2},
+     {'character': 'b', 'number': 1},
+     {'character': 'b', 'number': 2}]
+    """
+    if not params:
+        # if no parametrization return an empty dict, so a single case is executed
+        return ({},)
+    else:
+        return (dict(zip(params, x)) for x in itertools.product(*params.values()))
+
 
 class Runner:
     """manages running a tests and producing TestOutcome.
@@ -80,36 +98,50 @@ class Runner:
 
             # manage fixtures
             # kwargs contain fixtures values for dependency injection
-            kwargs = {}
+            fix_single = {}
+            fix_parametrized = {}
+
+            # split fixtures into single or parametrized
             if case_fixtures := getattr(case.func, 'use_fix', None):
-                fix_in_use = {}
-                for name, fix in case_fixtures.items():
+                for name, fix in reversed(case_fixtures.items()):
                     # TODO: friendly error message if @use is passed a non-fixture
                     assert fix.func.rut_scope == 'function'
-                    # None indicates no parametrization
-                    for param in (fix.params or [None]):
-                        fix_kwargs = fix.kwargs.copy()
-                        if param is not None:
-                            fix_kwargs['param'] = param
-                            param_name = getattr(param, '__name__', str(param))
-                            case_name = f'{base_name}[{param_name}]'
-                        else:
-                            case_name = base_name
-                        fix_in_use[name] = fix.func(*fix.args, **fix_kwargs)
-                        kwargs[name] = next(fix_in_use[name])
 
-                        outcome = self.run_case(mod_name, case_name, case, kwargs)
+                    if not fix.params:
+                        fix_single[name] = fix
+                    else:
+                        fix_parametrized[name] = fix.params
 
-                        # fixture cleanup
-                        if fix_in_use:
-                            for name in fix_in_use.keys():
-                                # should I check StopIteration was raised?
-                                next(fix_in_use[name], None)
+            for parametrization_spec in parametrization_product(fix_parametrized):
+                case_name = base_name
+                fix_in_use = {}  # name: fixture generator
+                kwargs = {}  # kwargs for case (with fixture values)
 
-                        self.outcomes[mod_name][case_name] = outcome
-                        yield outcome
+                # non-parametrized
+                for name, fix in fix_single.items():
+                    fix_kwargs = fix.kwargs.copy()
+                    fix_in_use[name] = fix.func(*fix.args, **fix_kwargs)
+                    kwargs[name] = next(fix_in_use[name])
 
-            else:  # no fixtures - FIXME: DRY
-                outcome = self.run_case(mod_name, base_name, case, kwargs)
-                self.outcomes[mod_name][base_name] = outcome
+
+                for name in fix_parametrized.keys():
+                    fix = case_fixtures[name]
+                    fix_kwargs = fix.kwargs.copy()
+                    param = parametrization_spec[name]
+                    fix_kwargs['param'] = param
+                    param_name = getattr(param, '__name__', str(param))
+                    case_name += f'[{param_name}]'
+
+                    fix_in_use[name] = fix.func(*fix.args, **fix_kwargs)
+                    kwargs[name] = next(fix_in_use[name])
+
+                outcome = self.run_case(mod_name, case_name, case, kwargs)
+
+                # fixture cleanup
+                if fix_in_use:
+                    for name in fix_in_use.keys():
+                        # should I check StopIteration was raised?
+                        next(fix_in_use[name], None)
+
+                self.outcomes[mod_name][case_name] = outcome
                 yield outcome

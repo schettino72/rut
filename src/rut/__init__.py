@@ -1,7 +1,7 @@
 from .checker import check
 from .case import skip_test
 
-__all__ = ['check']
+__all__ = ['check', 'skip_test']
 
 
 def fixture(original_func=None, *, params=None):

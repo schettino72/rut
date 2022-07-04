@@ -111,10 +111,37 @@ def test_param_fix(number):
         selector = Selector()
         add_test_cases(selector, src)
         runner = run_all(selector)
-        print(runner.outcomes)
         check(len(runner.outcomes['this_test'])) == 2
         check(runner.outcomes['this_test']['test_param_fix[1]'].result) == 'SUCCESS'
         check(runner.outcomes['this_test']['test_param_fix[2]'].result) == 'SUCCESS'
+
+
+    def test_parametrized_multi(self):
+        src = """
+from rut import check, fixture, use
+
+@fixture(params=[1, 2])
+def fix1(param):
+    yield param
+
+@fixture(params=[4, 5])
+def fix2(param):
+    yield param
+
+@use('number1', fix1)
+@use('number2', fix2)
+def test_param_fix(number1, number2):
+    pass
+"""
+        selector = Selector()
+        add_test_cases(selector, src)
+        runner = run_all(selector)
+        check(len(runner.outcomes['this_test'])) == 4
+        check(runner.outcomes['this_test']).contains('test_param_fix[1][4]')
+        check(runner.outcomes['this_test']['test_param_fix[1][4]'].result) == 'SUCCESS'
+        check(runner.outcomes['this_test']['test_param_fix[1][5]'].result) == 'SUCCESS'
+        check(runner.outcomes['this_test']['test_param_fix[2][4]'].result) == 'SUCCESS'
+        check(runner.outcomes['this_test']['test_param_fix[2][5]'].result) == 'SUCCESS'
 
 
 
