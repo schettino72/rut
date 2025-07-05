@@ -1,3 +1,3 @@
-__all__ = ["RutCLI", "WarningCollector"]
+__all__ = ["RutCLI", "WarningCollector", "RutError", "InvalidAsyncTestError"]
 
-from .runner import RutCLI, WarningCollector
+from .runner import RutCLI, WarningCollector, RutError, InvalidAsyncTestError

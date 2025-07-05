@@ -8,6 +8,14 @@ import inspect
 import warnings
 import unittest
 
+class RutError(Exception):
+    """Base exception for the rut runner."""
+    pass
+
+class InvalidAsyncTestError(RutError):
+    """Raised when a test method is async but the class is not an IsolatedAsyncioTestCase."""
+    pass
+
 class WarningCollector:
     # TODO:
     # Print stack traces for warnings
@@ -108,7 +116,7 @@ class RutCLI:
                 if inspect.iscoroutinefunction(test_method):
                     if not isinstance(test, unittest.IsolatedAsyncioTestCase):
                         # TODO: clean error output to user
-                        raise Exception(
+                        raise InvalidAsyncTestError(
                             f'Testing method is a coroutine but class is not a `unittest.IsolatedAsyncioTestCase` => {test.id()}'
                         )
 

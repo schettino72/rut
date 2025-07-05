@@ -1,6 +1,6 @@
 import unittest
 import sys
-from rutlib.runner import RutCLI
+from rutlib.runner import RutCLI, InvalidAsyncTestError
 
 class TestRunner(unittest.TestCase):
     def setUp(self):
@@ -46,7 +46,7 @@ class TestRunner(unittest.TestCase):
     def test_fail_on_invalid_async_test(self):
         sys.argv = ["rut", "-k", "invalid_async", "tests/samples"]
         cli = RutCLI()
-        with self.assertRaises(Exception) as cm:
+        with self.assertRaises(InvalidAsyncTestError) as cm:
             cli.load_tests(pattern="sample*.py")
 
         self.assertIn("is a coroutine but class is not a `unittest.IsolatedAsyncioTestCase`", str(cm.exception))
