@@ -6,8 +6,13 @@ Changes
 ====================
 
 - Project revived, requires Python 3.12+ (3.13 supported)
-
-*old history*
+- Test discovery and filtering by keyword (`-k`)
+- Exit on first failure (`-x`)
+- Disable output capturing (`-s`)
+- Code coverage (`--cov`)
+- Sort tests by their definition order
+- Async test validation
+- Warning collection and reporting
 
 0.1.0 (*2022-04-29*)
 ====================

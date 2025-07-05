@@ -69,8 +69,8 @@ wheels = [
 ]
 
 [[package]]
-name = "rutlib"
-version = "0.1.0"
+name = "rut"
+version = "0.2.0.dev1"
 source = { editable = "." }
 dependencies = [
     { name = "coverage" },
@@ -78,6 +78,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "coverage" },
     { name = "ruff" },
 ]
 
@@ -85,4 +86,7 @@ dev = [
 requires-dist = [{ name = "coverage" }]
 
 [package.metadata.requires-dev]
-dev = [{ name = "ruff", specifier = ">=0.12.2" }]
+dev = [
+    { name = "coverage", specifier = ">=7.9.2" },
+    { name = "ruff", specifier = ">=0.12.2" },
+]

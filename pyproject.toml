@@ -1,6 +1,6 @@
 [project]
 name = "rut"
-version = "0.2.0"
+version = "0.2.0.dev1"
 description = "A test runner for python unittest with async support."
 authors = [{ name = "Eduardo Naufel Schettino", email = "schettino72@gmail.com" }]
 dependencies = [
@@ -33,5 +33,6 @@ build-backend = "setuptools.build_meta"
 
 [dependency-groups]
 dev = [
+    "coverage>=7.9.2",
     "ruff>=0.12.2",
 ]
