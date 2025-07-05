@@ -1,12 +1,31 @@
 # rut - Run Unit Tests
 
-`rut` (run unit tests) is a test runner for Python's `unittest` framework.
+`rut` is a modern and fully-featured test runner for Python's `unittest` framework, with simplicity as a core design goal.
 
 ## Features
 
 - Built-in support for async code.
 - Test discovery with keyword-based filtering.
 - Code coverage support.
+
+## Why use `rut`?
+
+### For the `unittest` User: A Modern Upgrade
+
+Are you a fan of the stability and explicitness of `unittest`, but wish you had a better runner experience? `rut` is your drop-in upgrade.
+
+*   **Zero-Config Discovery:** Just run `rut`. No more writing `if __name__ == '__main__':` boilerplate.
+*   **First-Class `asyncio` Support:** `rut` automatically detects and runs `async` tests correctly. No more `asyncio.run()` wrappers.
+*   **Powerful Filtering:** Run exactly the tests you want with simple keyword filtering (`-k "my_feature"`).
+*   **Integrated Coverage:** Get a full coverage report with a single flag (`--cov`).
+
+### For the `pytest` User: Simplicity and Power, Reunited
+
+Do you appreciate the power of modern test runners, but find yourself wrestling with the complexity and "magic" of third-party frameworks? `rut` offers a compelling alternative, embracing the explicitness of the standard library.
+
+*   **No Magic, Just Python:** `rut` is built directly on `unittest`. There are no hidden hooks, complex fixture systems, or assertion rewriting. Your tests are plain, debuggable Python.
+*   **Familiar, Powerful Features:** Get the features you rely on, like keyword filtering (`-k`), failing fast (`-x`), and seamless `asyncio` support, without the overhead of a large framework.
+*   **A Leaner Dependency Tree:** `rut` is a single, focused tool, not a sprawling ecosystem. Keep your project's dependencies clean and understandable.
 
 ## Installation
 
