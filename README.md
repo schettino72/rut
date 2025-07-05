@@ -64,6 +64,19 @@ rut -k "feature"
 |---|---|---|
 | `path` | The path to the tests to be discovered. | `tests` |
 
+## Configuration
+
+`rut` can be configured via the `[tool.rut]` section in your `pyproject.toml` file. If not configured, the default source is `["src", "tests"]`.
+
+### `coverage_source`
+
+To specify the source directories for coverage reporting, use the `coverage_source` key.
+
+```toml
+[tool.rut]
+coverage_source = ["my_app", "libs/my_lib"]
+```
+
 ## Writing Tests
 
 ### Basic Tests

@@ -1,0 +1,2 @@
+[tool.rut]
+coverage_source = ["my_app"]
