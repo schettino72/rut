@@ -1,4 +1,16 @@
-dist
-
-__pycache__
+# Python
+__pycache__/
+build/
+dist/
 *.egg-info
+
+# Environment
+.env
+.venv
+
+# Test & Coverage
+.coverage
+.pytest_cache/
+
+# Gemini
+GEMINI.md
