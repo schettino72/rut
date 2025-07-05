@@ -13,6 +13,8 @@ Changes
 - Sort tests by their definition order
 - Async test validation
 - Warning collection and reporting
+- Improved CLI with proper exit codes and conditional `ipdb` support
+- Set `TEST_RUNNER=rut` environment variable
 
 0.1.0 (*2022-04-29*)
 ====================
