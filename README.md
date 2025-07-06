@@ -66,15 +66,26 @@ rut -k "feature"
 
 ## Configuration
 
-`rut` can be configured via the `[tool.rut]` section in your `pyproject.toml` file. If not configured, the default source is `["src", "tests"]`.
+`rut` can be configured via the `[tool.rut]` section in your `pyproject.toml` file.
 
 ### `coverage_source`
 
-To specify the source directories for coverage reporting, use the `coverage_source` key.
+To specify the source directories for coverage reporting, use the `coverage_source` key. If not configured, the default source is `["src", "tests"]`.
 
 ```toml
 [tool.rut]
 coverage_source = ["my_app", "libs/my_lib"]
+```
+
+### `warning_filters`
+
+To add custom warning filters, use the `warning_filters` key. The format for each filter is a string that follows the `warnings.filterwarnings` format: `action:message:category:module`.
+
+```toml
+[tool.rut]
+warning_filters = [
+    "error::UserWarning:pydantic",
+]
 ```
 
 ## Writing Tests

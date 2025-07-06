@@ -2,7 +2,7 @@ import unittest
 import os
 import sys
 import io
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, PropertyMock
 
 from rutlib.cli import main
 
@@ -21,29 +21,34 @@ class TestCLI(unittest.TestCase):
     @patch('rutlib.cli.RutCLI')
     @patch('rutlib.cli.coverage.Coverage')
     def test_coverage_source_from_config(self, mock_coverage, mock_rut_cli):
-        # Change to the directory with the sample pyproject.toml
-        os.chdir("tests/samples/config")
+        # Mock the coverage_source property
+        type(mock_rut_cli.return_value).coverage_source = PropertyMock(return_value=["my_app"])
 
         # Mock the CLI args and run the main function
-        sys.argv = ["rut", "--cov"]
+        sys.argv = ["rut", "--cov", os.path.join(self.original_cwd, "tests")]
         main()
 
         # Check that coverage was called with the correct source
         mock_coverage.assert_called_with(source=["my_app"])
 
-    @patch('rutlib.cli.RutCLI')
-    @patch('rutlib.cli.coverage.Coverage')
-    @patch('sys.stderr', new_callable=io.StringIO)
-    def test_warns_on_missing_coverage_source(self, mock_stderr, mock_coverage, mock_rut_cli):
+    def test_warns_on_missing_coverage_source(self):
         # Change to the directory with the sample pyproject.toml
         os.chdir("tests/samples/config")
 
-        # Mock the CLI args and run the main function
-        sys.argv = ["rut", "--cov"]
-        main()
+        # Redirect stderr
+        original_stderr = sys.stderr
+        sys.stderr = captured_stderr = io.StringIO()
+
+        with patch('rutlib.cli.coverage.Coverage'):
+            # Mock the CLI args and run the main function
+            sys.argv = ["rut", "--cov", os.path.join(self.original_cwd, "tests")]
+            main()
+
+        # Restore stderr
+        sys.stderr = original_stderr
 
         # Check that the warning was printed to stderr
-        self.assertIn("Warning: coverage source directory 'my_app' does not exist.", mock_stderr.getvalue())
+        self.assertIn("Warning: coverage source directory 'my_app' does not exist.", captured_stderr.getvalue())
 
 if __name__ == '__main__':
     unittest.main()

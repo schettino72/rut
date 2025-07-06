@@ -16,7 +16,7 @@ Changes
 - Improved CLI with proper exit codes and conditional `ipdb` support
 - Set `TEST_RUNNER=rut` environment variable
 - Coverage source is now configurable via `pyproject.toml` and defaults to `["src", "tests"]`
-
+- Warning filters are now configurable via `pyproject.toml`
 
 0.1.0 (*2022-04-29*)
 ====================

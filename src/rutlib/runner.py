@@ -2,11 +2,14 @@
 RUT - test runner
 """
 
+import os
+import sys
 import argparse
 import gc
 import inspect
 import warnings
 import unittest
+import tomllib
 
 class RutError(Exception):
     """Base exception for the rut runner."""
@@ -17,6 +20,17 @@ class InvalidAsyncTestError(RutError):
     pass
 
 class WarningCollector:
+    """
+    Collects all warnings raised during a test run and allows custom filtering.
+
+    This class has two primary functions:
+    1.  It installs a hook to capture all warnings, even those that might
+        normally be ignored by the default filtering, and prints them at
+        the end of the test run.
+    2.  It allows the user to provide a list of custom warning filters to
+        overwrite the default behavior, for example, to turn specific
+        warnings into exceptions.
+    """
     # TODO:
     # Print stack traces for warnings
     # warnings.simplefilter("always")
@@ -27,10 +41,11 @@ class WarningCollector:
         self._original_show = None
         self.collected = []
 
-    def setup(self):
+    def setup(self, extra):
         # unittest by default silent some warnings...
         # FIXME: Should make it explicit.
         # warnings.resetwarnings()
+        # warnings.simplefilter("always")
 
         self._original_show = warnings.showwarning
 
@@ -43,10 +58,20 @@ class WarningCollector:
         warnings.showwarning = _warn_collector
         warnings.filterwarnings("always", category=RuntimeWarning)
 
-        # FIXME: make this configurable -
-        # Filter only Pydantic warnings
-        warnings.filterwarnings("error", category=UserWarning, module="pydantic")
+        # Filter only my_specific_module warnings
+        for spec in extra:
+            warnings.filterwarnings(
+                spec['action'],
+                category=spec['category'],
+                module=spec['module'])
         gc.collect()
+
+
+    def cleanup(self):
+        if self._original_show:
+            warnings.showwarning = self._original_show
+            self._original_show = None
+            warnings.resetwarnings()
 
     def print_warnings(self):
         if self.collected:
@@ -55,6 +80,7 @@ class WarningCollector:
             warnings_str = f"{warn[1].__name__} => {warn[0]} at {warn[2]}:{warn[3]}"
             print("---- Warning \n", warnings_str)
             print("----")
+
 
 
 class RutCLI:
@@ -67,6 +93,7 @@ class RutCLI:
 
     def __init__(self):
         self.args = self.parse_args()
+        self.config = self.load_config()
 
     def parse_args(self):
         parser = argparse.ArgumentParser(description="RUT")
@@ -80,6 +107,57 @@ class RutCLI:
             'test_path', nargs='?', type=str, default='tests', help='Path to tests.'
         )
         return parser.parse_args()
+
+    def load_config(self):
+        try:
+            with open("pyproject.toml", "rb") as f:
+                pyproject_data = tomllib.load(f)
+                return pyproject_data.get("tool", {}).get("rut", {})
+        except FileNotFoundError:
+            return {}
+
+    @property
+    def coverage_source(self):
+        # Default coverage source
+        cov_source = self.config.get("coverage_source", ["src", "tests"])
+
+        # Check for non-existent source directories
+        for source_dir in cov_source:
+            if not os.path.isdir(source_dir):
+                print(
+                    f"Warning: coverage source directory '{source_dir}' does not exist.",
+                    file=sys.stderr,
+                )
+        return cov_source
+
+    @property
+    def warning_filters(self):
+        """
+        Parses warning filters from pyproject.toml.
+
+        Each filter is a string in the format: "action:category:module".
+        Returns a list of dictionaries, each with the keys:
+        'action', 'category', 'module'.
+        """
+        filters = []
+        filter_strings = self.config.get("warning_filters", [])
+        for filter_str in filter_strings:
+            parts = filter_str.split(":")
+            assert len(parts) >= 3
+            filter_dict = {
+                'action': parts[0],
+                'message': parts[1],
+                'module': parts[3] if len(parts) > 3 else ""
+            }
+
+            category_name = parts[2]
+            if category_name:
+                try:
+                    filter_dict['category'] = getattr(warnings, category_name)
+                except AttributeError:
+                    print(f"Warning: Could not find warning category '{category_name}'. Defaulting to 'Warning'.", file=sys.stderr)
+            filters.append(filter_dict)
+        return filters
 
     @classmethod
     def _filter_keyword(cls, suite, keyword, level=1):
@@ -173,7 +251,7 @@ class RutCLI:
         )
 
         wc = WarningCollector()
-        wc.setup()
+        wc.setup(extra=self.warning_filters)
         result = runner.run(suite)  # unittest.TextTestResult
         wc.print_warnings()
         return result

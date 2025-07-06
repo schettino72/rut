@@ -1,6 +1,59 @@
 import unittest
 import sys
-from rutlib.runner import RutCLI, InvalidAsyncTestError
+import warnings
+from unittest.mock import patch
+from rutlib.runner import RutCLI, InvalidAsyncTestError, WarningCollector
+
+class TestWarningCollector(unittest.TestCase):
+    def setUp(self):
+        self.wc = WarningCollector()
+
+    def tearDown(self):
+        self.wc.cleanup()
+
+    def test_collects_runtime_warnings(self):
+        self.wc.setup([])
+        with patch.object(self.wc, 'collected', []):
+            warnings.warn("This is a test warning", RuntimeWarning)
+            self.assertEqual(len(self.wc.collected), 1)
+            self.assertIn("This is a test warning", self.wc.collected[0][0])
+
+    def test_by_default_warning_no_raise(self):
+        with warnings.catch_warnings():
+            self.wc.setup([])
+            from tests.samples import my_specific_module
+            my_specific_module.do_warning()
+
+    def test_warning_raise(self):
+        with warnings.catch_warnings():
+            self.wc.setup([{'action': 'error', 'category': UserWarning, 'module':'' }])
+            with self.assertRaises(UserWarning):
+                from tests.samples import my_specific_module
+                my_specific_module.do_warning()
+
+    def test_warning_raise_module_only_not_raised(self):
+        with warnings.catch_warnings():
+            self.wc.setup([{
+                'action': 'error',
+                'category': UserWarning,
+                'module':'lalala',
+            }])
+            # not raised because dont match lalala
+            from tests.samples import my_specific_module
+            my_specific_module.do_warning()
+
+    def test_warning_raise_module_only(self):
+        with warnings.catch_warnings():
+            self.wc.setup([{
+                'action': 'error',
+                'category': UserWarning,
+                'module':'tests.samples.my_specific_module',
+            }])
+            with self.assertRaises(UserWarning):
+                from tests.samples import my_specific_module
+                my_specific_module.do_warning()
+
+
 
 class TestRunner(unittest.TestCase):
     def setUp(self):
