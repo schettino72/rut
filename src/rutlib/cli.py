@@ -1,12 +1,8 @@
 import os
 import sys
-import shutil
-import coverage
 import argparse
 import tomllib
 import builtins
-import warnings
-from .runner import RutRunner
 
 
 class RutCLI:

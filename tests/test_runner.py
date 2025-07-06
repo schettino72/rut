@@ -1,5 +1,4 @@
 import unittest
-import sys
 import warnings
 from unittest.mock import patch
 from rutlib.runner import RutRunner, InvalidAsyncTestError, WarningCollector

@@ -2,15 +2,10 @@
 RUT - test runner
 """
 
-import os
-import sys
-import argparse
 import gc
 import inspect
-import builtins
 import warnings
 import unittest
-import tomllib
 
 class RutError(Exception):
     """Base exception for the rut runner."""
