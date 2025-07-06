@@ -6,6 +6,7 @@
 
 ## Features
 
+- **Blazingly Fast (to type):** `rut` is only 3 characters.
 - Built-in support for async code.
 - Test discovery with keyword-based filtering.
 - Code coverage support.

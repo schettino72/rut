@@ -1,23 +1,24 @@
 [project]
 name = "rut"
-version = "0.2.0"
+version = "0.2.1"
 description = "A test runner for python unittest with async support."
 authors = [{ name = "Eduardo Naufel Schettino", email = "schettino72@gmail.com" }]
 dependencies = [
     "coverage"
 ]
 requires-python = ">=3.12"
-license = { file = "LICENSE" }
-keywords = ["test", "unittest", "async", "runner"]
+license = "MIT"
+license-files = ["LICENSE"]
+keywords = ["test", "unittest", "async"]
 classifiers = [
     "Development Status :: 4 - Beta",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Testing",
 ]
+readme = {file = "README.md", content-type = "text/markdown"}
 
 [project.urls]
 "Homepage" = "https://github.com/schettino72/rut"
@@ -26,10 +27,6 @@ classifiers = [
 
 [project.scripts]
 rut = "rutlib.__main__:main"
-
-[build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"
 
 [dependency-groups]
 dev = [
