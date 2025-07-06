@@ -7,6 +7,7 @@ from .runner import RutRunner
 
 
 def main():
+    sys.path.insert(0, os.getcwd())
     os.environ['TEST_RUNNER'] = 'rut'
     cli = RutCLI()
 
