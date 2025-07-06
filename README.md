@@ -2,6 +2,8 @@
 
 `rut` is a modern and fully-featured test runner for Python's `unittest` framework, with simplicity as a core design goal.
 
+> Sponsored by [asserto.ai](https://asserto.ai)
+
 ## Features
 
 - Built-in support for async code.
