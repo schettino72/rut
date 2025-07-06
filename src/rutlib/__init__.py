@@ -1,5 +1,5 @@
 __all__ = ["RutCLI", "RutRunner", "WarningCollector", "RutError", "InvalidAsyncTestError"]
-__version__ = "0.2.1"
+__version__ = "0.3.0.dev0"
 __license__ = "MIT"
 __author__ = "Eduardo Naufel Schettino"
 __author_email__ = "schettino72@gmail.com"

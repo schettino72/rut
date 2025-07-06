@@ -1,6 +1,6 @@
 [project]
 name = "rut"
-version = "0.2.1"
+version = "0.3.0.dev0"
 description = "A test runner for python unittest with async support."
 authors = [{ name = "Eduardo Naufel Schettino", email = "schettino72@gmail.com" }]
 dependencies = [
