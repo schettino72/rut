@@ -83,83 +83,42 @@ class WarningCollector:
             print("----")
 
 
+class RutRunner:
+    def __init__(self, test_path, keyword, failfast, capture, warning_filters):
+        self.test_path = test_path
+        self.keyword = keyword
+        self.failfast = failfast
+        self.capture = capture
+        self.warning_filters = warning_filters
 
-class RutCLI:
-    """
-    Usage:
-      runner = RutCLI()
-      suite = runner.load_tests()
-      runner.run_tests(suite)
-    """
+    def load_tests(self, pattern="test*.py"):
+        """return unittest.suite.TestSuite
 
-    def __init__(self, config=None):
-        self.args = self.parse_args()
-        if config is None:
-            self.config = self.load_config()
-        else:
-            self.config = config
+        Suite has 3 leves:
+        1) suite with all modules
+        2) suite per class
+        3) actual tests
+        """
+        loader = unittest.TestLoader()
+        suite = loader.discover(self.test_path, pattern=pattern)
+        suite = self.sort_tests(suite)
+        if self.keyword:
+            suite = self._filter_keyword(suite, self.keyword)
+        self._check_async(suite)
+        return suite
 
-    def parse_args(self):
-        parser = argparse.ArgumentParser(description="RUT")
-        parser.add_argument('-k', '--keyword', type=str, help='Only run tests that match.')
-        parser.add_argument('-x', '--exitfirst', action='store_true', help='Exit on first failure.')
-        parser.add_argument('-s', '--capture', action='store_true', help='Disable all capturing')
-        # FIXME
-        # parser.add_argument('--pdb', action='store_true', help='Drop in pdb on error')
-        parser.add_argument('--cov', action='store_true', help='Code Coverage')
-        parser.add_argument(
-            'test_path', nargs='?', type=str, default='tests', help='Path to tests.'
+    def run_tests(self, suite):
+        runner = unittest.TextTestRunner(
+            verbosity=2,
+            buffer=not self.capture,
+            failfast=self.failfast,
         )
-        return parser.parse_args()
 
-    def load_config(self):
-        try:
-            with open("pyproject.toml", "rb") as f:
-                pyproject_data = tomllib.load(f)
-                return pyproject_data.get("tool", {}).get("rut", {})
-        except FileNotFoundError:
-            return {}
-
-    @property
-    def coverage_source(self):
-        # Default coverage source
-        cov_source = self.config.get("coverage_source", ["src", "tests"])
-
-        # Check for non-existent source directories
-        for source_dir in cov_source:
-            if not os.path.isdir(source_dir):
-                print(
-                    f"Warning: coverage source directory '{source_dir}' does not exist.",
-                    file=sys.stderr,
-                )
-        return cov_source
-
-    def warning_filters(self, filters_spec):
-        """
-        Parses warning filters from pyproject.toml.
-
-        Each filter is a string in the format: "action:message:category:module".
-        Returns a list of dictionaries, each with the keys:
-        'action', 'message', 'category', 'module'.
-        """
-        filters = []
-        for filter_str in filters_spec:
-            parts = filter_str.split(":")
-            assert len(parts) >= 3
-            filter_dict = {
-                'action': parts[0],
-                'message': parts[1],
-                'module': parts[3] if len(parts) > 3 else ""
-            }
-
-            category_name = parts[2]
-            if category_name:
-                try:
-                    filter_dict['category'] = getattr(builtins, category_name)
-                except AttributeError:
-                    print(f"Warning: Could not find warning category '{category_name}'. Defaulting to 'Warning'.", file=sys.stderr)
-            filters.append(filter_dict)
-        return filters
+        wc = WarningCollector()
+        wc.setup(extra=self.warning_filters)
+        result = runner.run(suite)  # unittest.TextTestResult
+        wc.print_warnings()
+        return result
 
     @classmethod
     def _filter_keyword(cls, suite, keyword, level=1):
@@ -228,32 +187,3 @@ class RutCLI:
         for test in sorted(flat_suite, key=cls.test_pos_key):
             pos_suite.addTest(test)
         return pos_suite
-
-    def load_tests(self, pattern="test*.py"):
-        """return unittest.suite.TestSuite
-
-        Suite has 3 leves:
-        1) suite with all modules
-        2) suite per class
-        3) actual tests
-        """
-        loader = unittest.TestLoader()
-        suite = loader.discover(self.args.test_path, pattern=pattern)
-        suite = self.sort_tests(suite)
-        if self.args.keyword:
-            suite = self._filter_keyword(suite, self.args.keyword)
-        self._check_async(suite)
-        return suite
-
-    def run_tests(self, suite):
-        runner = unittest.TextTestRunner(
-            verbosity=2,
-            buffer=not self.args.capture,
-            failfast=self.args.exitfirst,
-        )
-
-        wc = WarningCollector()
-        wc.setup(extra=self.warning_filters(self.config.get("warning_filters", [])))
-        result = runner.run(suite)  # unittest.TextTestResult
-        wc.print_warnings()
-        return result

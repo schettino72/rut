@@ -2,32 +2,74 @@ import os
 import sys
 import shutil
 import coverage
-from .runner import RutCLI
+import argparse
+import tomllib
+import builtins
+import warnings
+from .runner import RutRunner
 
 
-def main():
-    os.environ['TEST_RUNNER'] = 'rut'
-    cli = RutCLI()
+class RutCLI:
+    def __init__(self):
+        self.args = self.parse_args()
+        self.config = self.load_config()
 
-    if cli.args.cov:
-        cov = coverage.Coverage(source=cli.coverage_source)
-        cov.start()
+    def parse_args(self):
+        parser = argparse.ArgumentParser(description="RUT")
+        parser.add_argument('-k', '--keyword', type=str, help='Only run tests that match.')
+        parser.add_argument('-x', '--exitfirst', action='store_true', help='Exit on first failure.')
+        parser.add_argument('-s', '--capture', action='store_true', help='Disable all capturing')
+        parser.add_argument('--cov', action='store_true', help='Code Coverage')
+        parser.add_argument(
+            'test_path', nargs='?', type=str, default='tests', help='Path to tests.'
+        )
+        return parser.parse_args()
 
-    suite = cli.load_tests()
-    result = cli.run_tests(suite)
+    def load_config(self):
+        try:
+            with open("pyproject.toml", "rb") as f:
+                pyproject_data = tomllib.load(f)
+                return pyproject_data.get("tool", {}).get("rut", {})
+        except FileNotFoundError:
+            return {}
 
-    if cli.args.cov:
-        cov.stop()
-        cov.save()
-        cov.report(show_missing=True)
+    @property
+    def coverage_source(self):
+        # Default coverage source
+        cov_source = self.config.get("coverage_source", ["src", "tests"])
 
-    if result.wasSuccessful():
-        sys.exit(0)
-    else:
-        sys.exit(1)
+        # Check for non-existent source directories
+        for source_dir in cov_source:
+            if not os.path.isdir(source_dir):
+                print(
+                    f"Warning: coverage source directory '{source_dir}' does not exist.",
+                    file=sys.stderr,
+                )
+        return cov_source
 
+    def warning_filters(self, filters_spec):
+        """
+        Parses warning filters from pyproject.toml.
 
-if __name__ == "__main__":
-    if 'PYTHONBREAKPOINT' not in os.environ and shutil.which('ipdb'):
-        os.environ['PYTHONBREAKPOINT'] = 'ipdb.set_trace'
-    main()
+        Each filter is a string in the format: "action:message:category:module".
+        Returns a list of dictionaries, each with the keys:
+        'action', 'message', 'category', 'module'.
+        """
+        filters = []
+        for filter_str in filters_spec:
+            parts = filter_str.split(":")
+            assert len(parts) >= 3
+            filter_dict = {
+                'action': parts[0],
+                'message': parts[1],
+                'module': parts[3] if len(parts) > 3 else ""
+            }
+
+            category_name = parts[2]
+            if category_name:
+                try:
+                    filter_dict['category'] = getattr(builtins, category_name)
+                except AttributeError:
+                    print(f"Warning: Could not find warning category '{category_name}'. Defaulting to 'Warning'.", file=sys.stderr)
+            filters.append(filter_dict)
+        return filters

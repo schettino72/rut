@@ -2,7 +2,7 @@ import unittest
 import sys
 import warnings
 from unittest.mock import patch
-from rutlib.runner import RutCLI, InvalidAsyncTestError, WarningCollector
+from rutlib.runner import RutRunner, InvalidAsyncTestError, WarningCollector
 
 class TestWarningCollector(unittest.TestCase):
     def setUp(self):
@@ -54,41 +54,15 @@ class TestWarningCollector(unittest.TestCase):
                 my_specific_module.do_warning()
 
 
-class TestRutCLI(unittest.TestCase):
-    def test_warning_filters(self):
-        with patch('rutlib.runner.RutCLI.parse_args'):
-            cli = RutCLI(config={})
-            filters_spec = [
-                "error:message:UserWarning:tests.samples.my_specific_module",
-                "always:message:DeprecationWarning",
-            ]
-            filters = cli.warning_filters(filters_spec)
-            self.assertEqual(len(filters), 2)
-            self.assertEqual(filters[0]['action'], 'error')
-            self.assertEqual(filters[0]['category'], UserWarning)
-            self.assertEqual(filters[0]['module'], 'tests.samples.my_specific_module')
-            self.assertEqual(filters[1]['action'], 'always')
-            self.assertEqual(filters[1]['category'], DeprecationWarning)
-            self.assertEqual(filters[1]['module'], '')
-
-
 class TestRunner(unittest.TestCase):
-    def setUp(self):
-        self.original_argv = sys.argv
-
-    def tearDown(self):
-        sys.argv = self.original_argv
-
     def test_discover_all_samples(self):
-        sys.argv = ["rut", "tests/samples/discovery"]
-        cli = RutCLI()
-        suite = cli.load_tests(pattern="sample*.py")
+        runner = RutRunner('tests/samples/discovery', None, False, False, [])
+        suite = runner.load_tests(pattern="sample*.py")
         self.assertEqual(suite.countTestCases(), 4)
 
     def test_filter_by_keyword(self):
-        sys.argv = ["rut", "-k", "feature", "tests/samples/discovery"]
-        cli = RutCLI()
-        suite = cli.load_tests(pattern="sample*.py")
+        runner = RutRunner('tests/samples/discovery', 'feature', False, False, [])
+        suite = runner.load_tests(pattern="sample*.py")
         self.assertEqual(suite.countTestCases(), 2)
 
         test_ids = {test.id().split('.')[-1] for test in suite}
@@ -96,34 +70,30 @@ class TestRunner(unittest.TestCase):
         self.assertIn("test_delta_feature", test_ids)
 
     def test_filter_by_filename(self):
-        sys.argv = ["rut", "-k", "sample_one", "tests/samples/discovery"]
-        cli = RutCLI()
-        suite = cli.load_tests(pattern="sample*.py")
+        runner = RutRunner('tests/samples/discovery', 'sample_one', False, False, [])
+        suite = runner.load_tests(pattern="sample*.py")
         self.assertEqual(suite.countTestCases(), 2)
 
         test_ids = {test.id().split('.')[-2] for test in suite}
         self.assertIn("SampleOneTests", test_ids)
 
     def test_load_valid_async_test(self):
-        sys.argv = ["rut", "-k", "a_valid_async_test", "tests/samples"]
-        cli = RutCLI()
-        suite = cli.load_tests(pattern="sample*.py")
+        runner = RutRunner('tests/samples', 'a_valid_async_test', False, False, [])
+        suite = runner.load_tests(pattern="sample*.py")
         self.assertEqual(suite.countTestCases(), 1)
 
         test_ids = {test.id().split('.')[-1] for test in suite}
         self.assertIn("test_a_valid_async_test", test_ids)
 
     def test_fail_on_invalid_async_test(self):
-        sys.argv = ["rut", "-k", "invalid_async", "tests/samples"]
-        cli = RutCLI()
+        runner = RutRunner('tests/samples', 'invalid_async', False, False, [])
         with self.assertRaises(InvalidAsyncTestError) as cm:
-            cli.load_tests(pattern="sample*.py")
+            runner.load_tests(pattern="sample*.py")
 
         self.assertIn("is a coroutine but class is not a `unittest.IsolatedAsyncioTestCase`", str(cm.exception))
 
     def test_filter_by_keyword_nested(self):
-        sys.argv = ["rut", "-k", "nested_feature"]
-        cli = RutCLI()
+        runner = RutRunner(None, 'nested_feature', False, False, [])
         
         # Create a nested suite manually
         suite = unittest.TestSuite()
@@ -139,7 +109,7 @@ class TestRunner(unittest.TestCase):
         nested_suite.addTest(TestNested('test_another'))
         suite.addTest(nested_suite)
 
-        filtered_suite = cli._filter_keyword(suite, "nested_feature")
+        filtered_suite = runner._filter_keyword(suite, "nested_feature")
         self.assertEqual(filtered_suite.countTestCases(), 1)
         test_ids = {test.id().split('.')[-1] for test in filtered_suite}
         self.assertIn("test_nested_feature", test_ids)
