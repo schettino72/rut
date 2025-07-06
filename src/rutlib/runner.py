@@ -7,6 +7,7 @@ import sys
 import argparse
 import gc
 import inspect
+import builtins
 import warnings
 import unittest
 import tomllib
@@ -91,9 +92,12 @@ class RutCLI:
       runner.run_tests(suite)
     """
 
-    def __init__(self):
+    def __init__(self, config=None):
         self.args = self.parse_args()
-        self.config = self.load_config()
+        if config is None:
+            self.config = self.load_config()
+        else:
+            self.config = config
 
     def parse_args(self):
         parser = argparse.ArgumentParser(description="RUT")
@@ -130,18 +134,16 @@ class RutCLI:
                 )
         return cov_source
 
-    @property
-    def warning_filters(self):
+    def warning_filters(self, filters_spec):
         """
         Parses warning filters from pyproject.toml.
 
-        Each filter is a string in the format: "action:category:module".
+        Each filter is a string in the format: "action:message:category:module".
         Returns a list of dictionaries, each with the keys:
-        'action', 'category', 'module'.
+        'action', 'message', 'category', 'module'.
         """
         filters = []
-        filter_strings = self.config.get("warning_filters", [])
-        for filter_str in filter_strings:
+        for filter_str in filters_spec:
             parts = filter_str.split(":")
             assert len(parts) >= 3
             filter_dict = {
@@ -153,7 +155,7 @@ class RutCLI:
             category_name = parts[2]
             if category_name:
                 try:
-                    filter_dict['category'] = getattr(warnings, category_name)
+                    filter_dict['category'] = getattr(builtins, category_name)
                 except AttributeError:
                     print(f"Warning: Could not find warning category '{category_name}'. Defaulting to 'Warning'.", file=sys.stderr)
             filters.append(filter_dict)
@@ -251,7 +253,7 @@ class RutCLI:
         )
 
         wc = WarningCollector()
-        wc.setup(extra=self.warning_filters)
+        wc.setup(extra=self.warning_filters(self.config.get("warning_filters", [])))
         result = runner.run(suite)  # unittest.TextTestResult
         wc.print_warnings()
         return result

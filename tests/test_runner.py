@@ -54,6 +54,23 @@ class TestWarningCollector(unittest.TestCase):
                 my_specific_module.do_warning()
 
 
+class TestRutCLI(unittest.TestCase):
+    def test_warning_filters(self):
+        with patch('rutlib.runner.RutCLI.parse_args'):
+            cli = RutCLI(config={})
+            filters_spec = [
+                "error:message:UserWarning:tests.samples.my_specific_module",
+                "always:message:DeprecationWarning",
+            ]
+            filters = cli.warning_filters(filters_spec)
+            self.assertEqual(len(filters), 2)
+            self.assertEqual(filters[0]['action'], 'error')
+            self.assertEqual(filters[0]['category'], UserWarning)
+            self.assertEqual(filters[0]['module'], 'tests.samples.my_specific_module')
+            self.assertEqual(filters[1]['action'], 'always')
+            self.assertEqual(filters[1]['category'], DeprecationWarning)
+            self.assertEqual(filters[1]['module'], '')
+
 
 class TestRunner(unittest.TestCase):
     def setUp(self):
