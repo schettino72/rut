@@ -17,6 +17,7 @@ Changes
 - Set `TEST_RUNNER=rut` environment variable
 - Coverage source is now configurable via `pyproject.toml` and defaults to `["src", "tests"]`
 - Warning filters are now configurable via `pyproject.toml`
+- Session-level setup and teardown hooks (`rut_session_setup`, `rut_session_teardown`) in `conftest.py`
 
 0.1.0 (*2022-04-29*)
 ====================

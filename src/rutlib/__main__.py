@@ -16,7 +16,8 @@ def main():
         cov.start()
 
     runner = RutRunner(
-        test_path=cli.args.test_path,
+        test_path=cli.args.test_path or cli.test_base_dir,
+        test_base_dir=cli.test_base_dir,
         keyword=cli.args.keyword,
         failfast=cli.args.exitfirst,
         capture=cli.args.capture,

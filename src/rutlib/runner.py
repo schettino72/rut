@@ -1,3 +1,4 @@
+
 """
 RUT - test runner
 """
@@ -6,6 +7,9 @@ import gc
 import inspect
 import warnings
 import unittest
+import importlib.util
+import asyncio
+import os
 
 class RutError(Exception):
     """Base exception for the rut runner."""
@@ -79,12 +83,34 @@ class WarningCollector:
 
 
 class RutRunner:
-    def __init__(self, test_path, keyword, failfast, capture, warning_filters):
+    def __init__(self, test_path, test_base_dir, keyword, failfast, capture, warning_filters):
         self.test_path = test_path
+        self.test_base_dir = test_base_dir
         self.keyword = keyword
         self.failfast = failfast
         self.capture = capture
         self.warning_filters = warning_filters
+        self.conftest = self._load_conftest()
+
+    def _load_conftest(self):
+        conftest_path = os.path.join(self.test_base_dir, "conftest.py")
+        if not os.path.exists(conftest_path):
+            return None
+        spec = importlib.util.spec_from_file_location("conftest", conftest_path)
+        conftest = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(conftest)
+        return conftest
+
+    def _run_hook(self, hook_name):
+        if not self.conftest:
+            return
+        hook = getattr(self.conftest, hook_name, None)
+        if not hook:
+            return
+        if asyncio.iscoroutinefunction(hook):
+            asyncio.run(hook())
+        else:
+            hook()
 
     def load_tests(self, pattern="test*.py"):
         """return unittest.suite.TestSuite
@@ -103,17 +129,21 @@ class RutRunner:
         return suite
 
     def run_tests(self, suite):
-        runner = unittest.TextTestRunner(
-            verbosity=2,
-            buffer=not self.capture,
-            failfast=self.failfast,
-        )
+        self._run_hook("rut_session_setup")
+        try:
+            runner = unittest.TextTestRunner(
+                verbosity=2,
+                buffer=not self.capture,
+                failfast=self.failfast,
+            )
 
-        wc = WarningCollector()
-        wc.setup(extra=self.warning_filters)
-        result = runner.run(suite)  # unittest.TextTestResult
-        wc.print_warnings()
-        return result
+            wc = WarningCollector()
+            wc.setup(extra=self.warning_filters)
+            result = runner.run(suite)  # unittest.TextTestResult
+            wc.print_warnings()
+            return result
+        finally:
+            self._run_hook("rut_session_teardown")
 
     @classmethod
     def _filter_keyword(cls, suite, keyword, level=1):

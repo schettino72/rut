@@ -57,6 +57,7 @@ rut -k "feature"
 | `--exitfirst` | `-x` | Exit on the first failure. |
 | `--capture` | `-s` | Disable all output capturing. |
 | `--cov` | | Run with code coverage. |
+| `--test-base-dir` | | The base directory for `conftest.py` discovery. |
 
 ### Positional Arguments
 
@@ -88,6 +89,15 @@ warning_filters = [
 ]
 ```
 
+### `test_base_dir`
+
+To specify the base directory for `conftest.py` discovery, use the `test_base_dir` key.
+
+```toml
+[tool.rut]
+test_base_dir = "my_tests"
+```
+
 ## Writing Tests
 
 ### Basic Tests
@@ -117,6 +127,33 @@ class MyAsyncTest(unittest.IsolatedAsyncioTestCase):
 ```
 
 ## Advanced
+
+### Session-Level Setup and Teardown
+
+For more complex testing scenarios, you may need to run setup code once before any tests start and teardown code once after all tests have finished. `rut` supports this with special, automatically-discovered "hook" functions.
+
+To use this feature, create a `conftest.py` file in your test base directory (usually `tests/`). `rut` will automatically find and execute the following functions if they are defined:
+
+-   `rut_session_setup()`: Executed once before the test session begins.
+-   `rut_session_teardown()`: Executed once after the test session ends, even if tests fail.
+
+Both of these functions can be synchronous (`def`) or asynchronous (`async def`).
+
+#### Example `conftest.py`
+
+```python
+# tests/conftest.py
+import asyncio
+from my_app.database import connect_db, disconnect_db
+
+async def rut_session_setup():
+    print("Setting up the test database...")
+    await connect_db()
+
+async def rut_session_teardown():
+    print("Tearing down the test database...")
+    await disconnect_db()
+```
 
 ### Detecting rut
 

@@ -1,3 +1,4 @@
+import os
 import unittest
 import warnings
 from unittest.mock import patch
@@ -55,12 +56,12 @@ class TestWarningCollector(unittest.TestCase):
 
 class TestRunner(unittest.TestCase):
     def test_discover_all_samples(self):
-        runner = RutRunner('tests/samples/discovery', None, False, False, [])
+        runner = RutRunner('tests/samples/discovery', 'tests', None, False, False, [])
         suite = runner.load_tests(pattern="sample*.py")
         self.assertEqual(suite.countTestCases(), 4)
 
     def test_filter_by_keyword(self):
-        runner = RutRunner('tests/samples/discovery', 'feature', False, False, [])
+        runner = RutRunner('tests/samples/discovery', 'tests', 'feature', False, False, [])
         suite = runner.load_tests(pattern="sample*.py")
         self.assertEqual(suite.countTestCases(), 2)
 
@@ -69,7 +70,7 @@ class TestRunner(unittest.TestCase):
         self.assertIn("test_delta_feature", test_ids)
 
     def test_filter_by_filename(self):
-        runner = RutRunner('tests/samples/discovery', 'sample_one', False, False, [])
+        runner = RutRunner('tests/samples/discovery', 'tests', 'sample_one', False, False, [])
         suite = runner.load_tests(pattern="sample*.py")
         self.assertEqual(suite.countTestCases(), 2)
 
@@ -77,7 +78,7 @@ class TestRunner(unittest.TestCase):
         self.assertIn("SampleOneTests", test_ids)
 
     def test_load_valid_async_test(self):
-        runner = RutRunner('tests/samples', 'a_valid_async_test', False, False, [])
+        runner = RutRunner('tests/samples', 'tests', 'a_valid_async_test', False, False, [])
         suite = runner.load_tests(pattern="sample*.py")
         self.assertEqual(suite.countTestCases(), 1)
 
@@ -85,14 +86,14 @@ class TestRunner(unittest.TestCase):
         self.assertIn("test_a_valid_async_test", test_ids)
 
     def test_fail_on_invalid_async_test(self):
-        runner = RutRunner('tests/samples', 'invalid_async', False, False, [])
+        runner = RutRunner('tests/samples', 'tests', 'invalid_async', False, False, [])
         with self.assertRaises(InvalidAsyncTestError) as cm:
             runner.load_tests(pattern="sample*.py")
 
         self.assertIn("is a coroutine but class is not a `unittest.IsolatedAsyncioTestCase`", str(cm.exception))
 
     def test_filter_by_keyword_nested(self):
-        runner = RutRunner(None, 'nested_feature', False, False, [])
+        runner = RutRunner('tests', 'tests', 'nested_feature', False, False, [])
         
         # Create a nested suite manually
         suite = unittest.TestSuite()
@@ -112,3 +113,46 @@ class TestRunner(unittest.TestCase):
         self.assertEqual(filtered_suite.countTestCases(), 1)
         test_ids = {test.id().split('.')[-1] for test in filtered_suite}
         self.assertIn("test_nested_feature", test_ids)
+
+
+class TestRunnerHooks(unittest.TestCase):
+    def setUp(self):
+        # Ensure the temp file doesn't exist before a test run
+        if os.path.exists("tests/samples/setup.tmp"):
+            os.remove("tests/samples/setup.tmp")
+        if os.path.exists("tests/samples/teardown.tmp"):
+            os.remove("tests/samples/teardown.tmp")
+
+    def tearDown(self):
+        # Clean up just in case a test fails and teardown isn't called
+        if os.path.exists("tests/samples/setup.tmp"):
+            os.remove("tests/samples/setup.tmp")
+        if os.path.exists("tests/samples/teardown.tmp"):
+            os.remove("tests/samples/teardown.tmp")
+
+    def test_hooks_are_called(self):
+        """
+        Tests that rut_session_setup and rut_session_teardown are called.
+        """
+        runner = RutRunner(
+            test_path='tests/samples',
+            test_base_dir='tests/samples',
+            keyword='HookCheckTest', # Only run our hook check test
+            failfast=False,
+            capture=False,
+            warning_filters=[]
+        )
+
+        # The file should not exist before the test run
+        self.assertFalse(os.path.exists("tests/samples/setup.tmp"))
+        self.assertFalse(os.path.exists("tests/samples/teardown.tmp"))
+
+        # Load and run the tests
+        suite = runner.load_tests(pattern="test_hook_check.py")
+        result = runner.run_tests(suite)
+
+        self.assertTrue(os.path.exists("tests/samples/setup.tmp"))
+        self.assertTrue(os.path.exists("tests/samples/teardown.tmp"))
+
+        # Ensure the test itself passed
+        self.assertTrue(result.wasSuccessful())

@@ -17,9 +17,18 @@ class RutCLI:
         parser.add_argument('-s', '--capture', action='store_true', help='Disable all capturing')
         parser.add_argument('--cov', action='store_true', help='Code Coverage')
         parser.add_argument(
-            'test_path', nargs='?', type=str, default='tests', help='Path to tests.'
+            '--test-base-dir', type=str, default=None, help='Base directory for tests.'
+        )
+        parser.add_argument(
+            'test_path', nargs='?', type=str, default=None, help='Path to tests.'
         )
         return parser.parse_args()
+
+    @property
+    def test_base_dir(self):
+        if self.args.test_base_dir:
+            return self.args.test_base_dir
+        return self.config.get("test_base_dir", "tests")
 
     def load_config(self):
         try:
