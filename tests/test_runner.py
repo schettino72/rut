@@ -120,3 +120,26 @@ class TestRunner(unittest.TestCase):
             cli.load_tests(pattern="sample*.py")
 
         self.assertIn("is a coroutine but class is not a `unittest.IsolatedAsyncioTestCase`", str(cm.exception))
+
+    def test_filter_by_keyword_nested(self):
+        sys.argv = ["rut", "-k", "nested_feature"]
+        cli = RutCLI()
+        
+        # Create a nested suite manually
+        suite = unittest.TestSuite()
+        nested_suite = unittest.TestSuite()
+        
+        class TestNested(unittest.TestCase):
+            def test_nested_feature(self):
+                pass
+            def test_another(self):
+                pass
+
+        nested_suite.addTest(TestNested('test_nested_feature'))
+        nested_suite.addTest(TestNested('test_another'))
+        suite.addTest(nested_suite)
+
+        filtered_suite = cli._filter_keyword(suite, "nested_feature")
+        self.assertEqual(filtered_suite.countTestCases(), 1)
+        test_ids = {test.id().split('.')[-1] for test in filtered_suite}
+        self.assertIn("test_nested_feature", test_ids)
