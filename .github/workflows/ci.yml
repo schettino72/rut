@@ -4,7 +4,7 @@ on:
   push:
     branches: [ main ]
   pull_request:
-    branches: [ main ]
+    types: [opened, reopened, synchronize, ready_for_review]
 
 jobs:
   build:
@@ -14,25 +14,27 @@ jobs:
         python-version: ["3.12", "3.13"]
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
 
     - name: Install uv
-      run: |
-        curl -LsSf https://astral.sh/uv/install.sh | sh
-        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+      uses: astral-sh/setup-uv@v6
+      with:
+          # should not enable-cache for act (usage: ACT=true act -j server)
+          enable-cache: ${{ env.ACT != 'true' }}
+          cache-local-path: ".cache/uv"
 
     - name: Install dependencies
       run: |
-        uv pip install -e .[dev]
+        uv sync --locked --dev
 
     - name: Lint with ruff
-      run: |
-        ruff check .
+      id: lint
+      run: uv run ruff check .
 
     - name: Unit Test
-      run: |
-        ./run_tests.sh
+      id: test
+      run: uv run ./run_tests.sh
