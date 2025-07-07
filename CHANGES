@@ -6,6 +6,7 @@ Changes
 ====================
 
 -
+- Colorized test output using `rich`.
 
 0.2.1 (2025-07-06)
 ====================
