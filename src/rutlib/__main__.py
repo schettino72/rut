@@ -2,7 +2,7 @@ import os
 import sys
 import shutil
 import coverage
-from .cli import RutCLI
+from .cli import RutCLI, RichTestRunner
 from .runner import RutRunner
 
 
@@ -24,7 +24,8 @@ def main():
         warning_filters=cli.warning_filters(cli.config.get("warning_filters", [])),
     )
     suite = runner.load_tests()
-    result = runner.run_tests(suite)
+    runner_class = RichTestRunner if not cli.args.no_color else None
+    result = runner.run_tests(suite, runner_class=runner_class)
 
     if cli.args.cov:
         cov.stop()

@@ -9,18 +9,19 @@ import unittest
 import importlib.util
 import asyncio
 import os
-import time
 from rich import print
 from rich.panel import Panel
-from rich.console import Console
+
 
 class RutError(Exception):
     """Base exception for the rut runner."""
     pass
 
+
 class InvalidAsyncTestError(RutError):
     """Raised when a test method is async but the class is not an IsolatedAsyncioTestCase."""
     pass
+
 
 class WarningCollector:
     """
@@ -88,66 +89,6 @@ class WarningCollector:
             ))
 
 
-class RichTestResult(unittest.TextTestResult):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.console = Console()
-
-    def addSuccess(self, test):
-        super().addSuccess(test)
-        self.console.print(f"[green]✔[/green] {test.id()}")
-
-    def addFailure(self, test, err):
-        super().addFailure(test, err)
-        self.console.print(f"[bold red]✖[/bold red] {test.id()}")
-
-    def addError(self, test, err):
-        super().addError(test, err)
-        self.console.print(f"[bold red]✖[/bold red] {test.id()}")
-
-    def addSkip(self, test, reason):
-        super().addSkip(test, reason)
-        self.console.print(f"[yellow]SKIP[/yellow] {test.id()}: {reason}")
-
-    def printErrors(self):
-        if self.errors or self.failures:
-            self.console.print("\n[bold red]Failures and Errors:[/bold red]")
-            if self.errors:
-                for test, err in self.errors:
-                    self.console.print(Panel(err, title=f"[bold red]ERROR: {test.id()}[/bold red]"))
-            if self.failures:
-                for test, err in self.failures:
-                    self.console.print(Panel(err, title=f"[bold red]FAIL: {test.id()}[/bold red]"))
-
-
-class RichTestRunner:
-    def __init__(self, failfast=False, buffer=False):
-        self.failfast = failfast
-        self.buffer = buffer
-        self.console = Console()
-
-    def run(self, suite):
-        result = RichTestResult(self.console.file, self.buffer, 0)
-        result.failfast = self.failfast
-        
-        start_time = time.time()
-        suite.run(result)
-        stop_time = time.time()
-        
-        time_taken = stop_time - start_time
-        result.printErrors()
-        
-        self.console.print("\n" + ("-" * 70))
-        self.console.print(f"Ran {result.testsRun} tests in {time_taken:.3f}s")
-        
-        if result.wasSuccessful():
-            self.console.print("\n[bold green]OK[/bold green]")
-        else:
-            self.console.print(f"\n[bold red]FAILED[/bold red] (failures={len(result.failures)}, errors={len(result.errors)})")
-            
-        return result
-
-
 class RutRunner:
     def __init__(self, test_path, test_base_dir, keyword, failfast, capture, warning_filters):
         self.test_path = test_path
@@ -186,6 +127,16 @@ class RutRunner:
         2) suite per class
         3) actual tests
         """
+        # TODO:         """report on failures importing modules due to syntax error"""
+        # import fnmatch
+        # for root, _, files in os.walk(self.test_path):
+        #     for f in files:
+        #         if f.endswith(".py") and fnmatch.fnmatch(f, pattern):
+        #             module_path = os.path.join(root, f)
+        #             spec = importlib.util.spec_from_file_location(f[:-3], module_path)
+        #             module = importlib.util.module_from_spec(spec)
+        #             spec.loader.exec_module(module)
+
         loader = unittest.TestLoader()
         suite = loader.discover(self.test_path, pattern=pattern)
         suite = self.sort_tests(suite)
@@ -194,14 +145,20 @@ class RutRunner:
         self._check_async(suite)
         return suite
 
-    def run_tests(self, suite):
+    def run_tests(self, suite, runner_class=None):
         self._run_hook("rut_session_setup")
         try:
-            runner = RichTestRunner(
-                failfast=self.failfast,
-                buffer=not self.capture,
-            )
-
+            if runner_class:
+                runner = runner_class(
+                    failfast=self.failfast,
+                    buffer=not self.capture,
+                )
+            else:
+                runner = unittest.TextTestRunner(
+                    verbosity=2,
+                    failfast=self.failfast,
+                    buffer=not self.capture,
+                )
             wc = WarningCollector()
             wc.setup(extra=self.warning_filters)
             result = runner.run(suite)

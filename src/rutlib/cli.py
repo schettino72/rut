@@ -3,6 +3,10 @@ import sys
 import argparse
 import tomllib
 import builtins
+import time
+import unittest
+from rich.console import Console
+from rich.panel import Panel
 
 
 class RutCLI:
@@ -22,6 +26,7 @@ class RutCLI:
         parser.add_argument(
             'test_path', nargs='?', type=str, default=None, help='Path to tests.'
         )
+        parser.add_argument('--no-color', action='store_true', help='Disable color output.')
         return parser.parse_args()
 
     @property
@@ -78,3 +83,63 @@ class RutCLI:
                     print(f"Warning: Could not find warning category '{category_name}'. Defaulting to 'Warning'.", file=sys.stderr)
             filters.append(filter_dict)
         return filters
+
+
+class RichTestResult(unittest.TextTestResult):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.console = Console()
+
+    def addSuccess(self, test):
+        super().addSuccess(test)
+        self.console.print(f"[green]✔[/green] {test.id()}")
+
+    def addFailure(self, test, err):
+        super().addFailure(test, err)
+        self.console.print(f"[bold red]✖[/bold red] {test.id()}")
+
+    def addError(self, test, err):
+        super().addError(test, err)
+        self.console.print(f"[bold red]✖[/bold red] {test.id()}")
+
+    def addSkip(self, test, reason):
+        super().addSkip(test, reason)
+        self.console.print(f"[yellow]SKIP[/yellow] {test.id()}: {reason}")
+
+    def printErrors(self):
+        if self.errors or self.failures:
+            self.console.print("\n[bold red]Failures and Errors:[/bold red]")
+            if self.errors:
+                for test, err in self.errors:
+                    self.console.print(Panel(err, title=f"[bold red]ERROR: {test.id()}[/bold red]"))
+            if self.failures:
+                for test, err in self.failures:
+                    self.console.print(Panel(err, title=f"[bold red]FAIL: {test.id()}[/bold red]"))
+
+
+class RichTestRunner:
+    def __init__(self, failfast=False, buffer=False):
+        self.failfast = failfast
+        self.buffer = buffer
+        self.console = Console()
+
+    def run(self, suite):
+        result = RichTestResult(self.console.file, self.buffer, 0)
+        result.failfast = self.failfast
+        
+        start_time = time.time()
+        suite.run(result)
+        stop_time = time.time()
+        
+        time_taken = stop_time - start_time
+        result.printErrors()
+        
+        self.console.print("\n" + ("-" * 70))
+        self.console.print(f"Ran {result.testsRun} tests in {time_taken:.3f}s")
+        
+        if result.wasSuccessful():
+            self.console.print("\n[bold green]OK[/bold green]")
+        else:
+            self.console.print(f"\n[bold red]FAILED[/bold red] (failures={len(result.failures)}, errors={len(result.errors)})")
+            
+        return result
