@@ -3,6 +3,7 @@ import unittest
 import warnings
 from unittest.mock import patch
 from rutlib.runner import RutRunner, InvalidAsyncTestError, WarningCollector
+from rutlib.cli import RichTestRunner
 
 class TestWarningCollector(unittest.TestCase):
     def setUp(self):
@@ -149,7 +150,7 @@ class TestRunnerHooks(unittest.TestCase):
 
         # Load and run the tests
         suite = runner.load_tests(pattern="test_hook_check.py")
-        result = runner.run_tests(suite)
+        result = runner.run_tests(suite, runner_class=RichTestRunner)
 
         self.assertTrue(os.path.exists("tests/samples/setup.tmp"))
         self.assertTrue(os.path.exists("tests/samples/teardown.tmp"))

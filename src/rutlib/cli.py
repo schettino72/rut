@@ -85,10 +85,10 @@ class RutCLI:
         return filters
 
 
-class RichTestResult(unittest.TextTestResult):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.console = Console()
+class RichTestResult(unittest.TestResult):
+    def __init__(self, console, buffer: bool, verbosity):
+        super().__init__()
+        self.console = console
 
     def addSuccess(self, test):
         super().addSuccess(test)
@@ -124,22 +124,22 @@ class RichTestRunner:
         self.console = Console()
 
     def run(self, suite):
-        result = RichTestResult(self.console.file, self.buffer, 0)
+        result = RichTestResult(self.console, self.buffer, 0)
         result.failfast = self.failfast
-        
+
         start_time = time.time()
         suite.run(result)
         stop_time = time.time()
-        
+
         time_taken = stop_time - start_time
         result.printErrors()
-        
+
         self.console.print("\n" + ("-" * 70))
         self.console.print(f"Ran {result.testsRun} tests in {time_taken:.3f}s")
-        
+
         if result.wasSuccessful():
             self.console.print("\n[bold green]OK[/bold green]")
         else:
             self.console.print(f"\n[bold red]FAILED[/bold red] (failures={len(result.failures)}, errors={len(result.errors)})")
-            
+
         return result
