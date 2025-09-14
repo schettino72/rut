@@ -33,6 +33,7 @@ rut = "rutlib.__main__:main"
 dev = [
     "build>=1.2.2.post1",
     "coverage>=7.9.2",
+    "pyright>=1.1.405",
     "ruff>=0.12.2",
     "twine>=6.1.0",
 ]
