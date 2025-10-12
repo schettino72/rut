@@ -91,7 +91,9 @@ class TestRunner(unittest.TestCase):
         with self.assertRaises(InvalidAsyncTestError) as cm:
             runner.load_tests(pattern="sample*.py")
 
-        self.assertIn("is a coroutine but class is not a `unittest.IsolatedAsyncioTestCase`", str(cm.exception))
+        # Check that the error message is informative
+        self.assertIn("is a coroutine but its class is not", str(cm.exception))
+        self.assertIn("unittest.IsolatedAsyncioTestCase", str(cm.exception))
 
     def test_filter_by_keyword_nested(self):
         runner = RutRunner('tests', 'tests', 'nested_feature', False, False, [])

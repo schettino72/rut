@@ -2,11 +2,41 @@
 Changes
 =======
 
+1.0.0 (2025-10-12)
+==================
+
+**Production Release - API Stable**
+
+This is the first stable release of rut. The API is now considered stable
+and will follow semantic versioning.
+
+New Features
+------------
+
+- Add ``--version`` flag to display version information
+- Comprehensive type hints added to all public APIs
+- Detailed docstrings for all public classes and methods
+- Improved error messages for invalid async test configurations
+
+Improvements
+------------
+
+- Better CLI help text with examples and repository link
+- Enhanced warning filter validation with clearer error messages
+- More robust conftest.py loading with better error handling
+- Improved documentation throughout the codebase
+
+Changes
+-------
+
+- Version bumped to 1.0.0 to signal production readiness
+- Development status updated to "Production/Stable" in package metadata
+- Enhanced package classifiers for better discoverability
+
 0.3.0 (*unreleased*)
 ====================
 
--
-- Colorized test output using `rich`.
+- Colorized test output using ``rich``.
 
 0.2.1 (2025-07-06)
 ====================
