@@ -170,6 +170,13 @@ if os.environ.get('TEST_RUNNER') == 'rut':
     pass
 ```
 
+## Documentation
+
+- [API Reference](API.md) - Detailed API documentation
+- [Examples](examples/) - Working examples for common use cases
+- [Contributing](CONTRIBUTING.md) - Guide for contributors
+- [Security](SECURITY.md) - Security policy and vulnerability reporting
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
