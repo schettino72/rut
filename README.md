@@ -2,6 +2,11 @@
 
 `rut` is a modern and fully-featured test runner for Python's `unittest` framework, with simplicity as a core design goal.
 
+[![PyPI version](https://img.shields.io/pypi/v/rut.svg)](https://pypi.org/project/rut/)
+[![Python versions](https://img.shields.io/pypi/pyversions/rut.svg)](https://pypi.org/project/rut/)
+[![CI Github actions](https://github.com/schettino72/rut/actions/workflows/test.yml/badge.svg?branch=master)](https://github.com/schettino72/rut/actions/workflows/test.yml?query=branch%3Amaster)
+
+
 > Sponsored by [asserto.ai](https://asserto.ai)
 
 ## Features
