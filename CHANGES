@@ -7,6 +7,7 @@ Changes
 
 - Topological test ordering by import dependencies (dependencies run first).
 - Added `--alpha` / `-a` flag to use alphabetical ordering instead.
+- Added `--dry-run` flag to list tests without running them.
 - Added `--version` / `-V` flag.
 - Colorized test output using `rich`.
 - Logging output is now captured along with stdout/stderr.

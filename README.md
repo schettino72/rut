@@ -66,6 +66,7 @@ rut -k "feature"
 | `--exitfirst` | `-x` | Exit on the first failure. |
 | `--capture` | `-s` | Disable all output capturing. |
 | `--alpha` | `-a` | Sort tests alphabetically instead of by import dependencies. |
+| `--dry-run` | | List tests in execution order without running them. |
 | `--cov` | | Run with code coverage. |
 | `--version` | `-V` | Show version and exit. |
 | `--test-base-dir` | | The base directory for `conftest.py` discovery. |

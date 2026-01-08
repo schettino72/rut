@@ -33,6 +33,8 @@ class RutCLI:
         parser.add_argument('--no-color', action='store_true', help='Disable color output.')
         parser.add_argument('-a', '--alpha', action='store_true',
                             help='Sort tests alphabetically instead of by import dependencies')
+        parser.add_argument('--dry-run', action='store_true',
+                            help='List tests in execution order without running them')
         return parser.parse_args()
 
     @property

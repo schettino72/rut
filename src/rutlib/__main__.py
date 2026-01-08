@@ -25,6 +25,13 @@ def main():
         alpha=cli.args.alpha,
     )
     suite = runner.load_tests()
+
+    if cli.args.dry_run:
+        print(f"Would run {suite.countTestCases()} tests:")
+        for test in suite:
+            print(f"  {test.id()}")
+        sys.exit(0)
+
     runner_class = RichTestRunner if not cli.args.no_color else None
     result = runner.run_tests(suite, runner_class=runner_class)
 
