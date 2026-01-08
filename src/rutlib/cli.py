@@ -1,9 +1,10 @@
+import argparse
+import builtins
+import logging
 import os
 import sys
-import argparse
-import tomllib
-import builtins
 import time
+import tomllib
 import unittest
 from rich.console import Console
 from rich.panel import Panel
@@ -89,6 +90,27 @@ class RichTestResult(unittest.TestResult):
     def __init__(self, console, buffer: bool, verbosity):
         super().__init__()
         self.console = console
+        self._original_handler_streams = {}
+
+    def _setupStdout(self):
+        super()._setupStdout()
+        if self.buffer:
+            for handler in logging.root.handlers:
+                if hasattr(handler, 'stream'):
+                    if handler.stream is self._original_stdout:
+                        self._original_handler_streams[id(handler)] = handler.stream
+                        handler.stream = self._stdout_buffer
+                    elif handler.stream is self._original_stderr:
+                        self._original_handler_streams[id(handler)] = handler.stream
+                        handler.stream = self._stderr_buffer
+
+    def _restoreStdout(self):
+        if self.buffer:
+            for handler in logging.root.handlers:
+                if id(handler) in self._original_handler_streams:
+                    handler.stream = self._original_handler_streams[id(handler)]
+            self._original_handler_streams.clear()
+        super()._restoreStdout()
 
     def addSuccess(self, test):
         super().addSuccess(test)
@@ -121,11 +143,13 @@ class RichTestRunner:
     def __init__(self, failfast=False, buffer=False):
         self.failfast = failfast
         self.buffer = buffer
-        self.console = Console()
+        # Use sys.__stdout__ to bypass capture - test progress should always be visible
+        self.console = Console(file=sys.__stdout__)
 
     def run(self, suite):
         result = RichTestResult(self.console, self.buffer, 0)
         result.failfast = self.failfast
+        result.buffer = self.buffer
 
         start_time = time.time()
         suite.run(result)

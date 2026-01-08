@@ -1,4 +1,6 @@
+import logging
 import os
+import sys
 import unittest
 import warnings
 from unittest.mock import patch
@@ -157,3 +159,38 @@ class TestRunnerHooks(unittest.TestCase):
 
         # Ensure the test itself passed
         self.assertTrue(result.wasSuccessful())
+
+
+class TestLoggingCapture(unittest.TestCase):
+    def setUp(self):
+        self.original_handlers = logging.root.handlers[:]
+        self.original_level = logging.root.level
+
+    def tearDown(self):
+        logging.root.handlers = self.original_handlers
+        logging.root.level = self.original_level
+
+    def test_logging_output_captured_with_rich_runner(self):
+        """Test that logging output is captured when buffer=True with RichTestRunner."""
+        import io
+        from io import StringIO
+
+        logging.basicConfig(level=logging.INFO, force=True)
+
+        captured_stderr = StringIO()
+        original_stderr = sys.stderr
+
+        class LoggingTest(unittest.TestCase):
+            def test_with_logging(self):
+                logging.info("This log message should be captured")
+
+        try:
+            sys.stderr = captured_stderr
+            runner = RichTestRunner(buffer=True)
+            result = runner.run(LoggingTest('test_with_logging'))
+        finally:
+            sys.stderr = original_stderr
+
+        leaked_output = captured_stderr.getvalue()
+        self.assertNotIn("This log message should be captured", leaked_output,
+                         "Logging output leaked to stderr instead of being captured")
