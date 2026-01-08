@@ -37,3 +37,9 @@ dev = [
     "ruff>=0.12.2",
     "twine>=6.1.0",
 ]
+
+[tool.uv]
+package = true
+
+[tool.uv.sources]
+rut = { path = ".", editable = true }
