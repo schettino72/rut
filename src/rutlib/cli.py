@@ -1,5 +1,6 @@
 import argparse
 import builtins
+import importlib.metadata
 import logging
 import os
 import sys
@@ -17,6 +18,8 @@ class RutCLI:
 
     def parse_args(self):
         parser = argparse.ArgumentParser(description="RUT")
+        parser.add_argument('-V', '--version', action='version',
+                            version=f"rut {importlib.metadata.version('rut')}")
         parser.add_argument('-k', '--keyword', type=str, help='Only run tests that match.')
         parser.add_argument('-x', '--exitfirst', action='store_true', help='Exit on first failure.')
         parser.add_argument('-s', '--capture', action='store_true', help='Disable all capturing')
