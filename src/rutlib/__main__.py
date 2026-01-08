@@ -23,6 +23,8 @@ def main():
         capture=cli.args.capture,
         warning_filters=cli.warning_filters(cli.config.get("warning_filters", [])),
         alpha=cli.args.alpha,
+        source_dirs=cli.coverage_source,
+        verbose=cli.args.verbose,
     )
     suite = runner.load_tests()
 

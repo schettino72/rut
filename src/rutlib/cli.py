@@ -35,6 +35,8 @@ class RutCLI:
                             help='Sort tests alphabetically instead of by import dependencies')
         parser.add_argument('--dry-run', action='store_true',
                             help='List tests in execution order without running them')
+        parser.add_argument('-v', '--verbose', action='store_true',
+                            help='Show verbose output including import dependency ranking')
         return parser.parse_args()
 
     @property

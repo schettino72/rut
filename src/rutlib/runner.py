@@ -94,7 +94,7 @@ class WarningCollector:
 
 
 class RutRunner:
-    def __init__(self, test_path, test_base_dir, keyword, failfast, capture, warning_filters, alpha=False):
+    def __init__(self, test_path, test_base_dir, keyword, failfast, capture, warning_filters, alpha=False, source_dirs=None, verbose=False):
         self.test_path = test_path
         self.test_base_dir = test_base_dir
         self.keyword = keyword
@@ -102,6 +102,8 @@ class RutRunner:
         self.capture = capture
         self.warning_filters = warning_filters
         self.alpha = alpha
+        self.source_dirs = source_dirs or ["src", "tests"]
+        self.verbose = verbose
         self.conftest = self._load_conftest()
 
     def _load_conftest(self):
@@ -266,18 +268,13 @@ class RutRunner:
 
     def _get_topological_order(self, test_modules):
         """Get topological order of test modules based on import dependencies."""
-        # Find all .py files in test_path and test_base_dir
+        # Find all .py files from configured source directories
         py_files = []
-        for search_path in [self.test_path, self.test_base_dir]:
-            if search_path and os.path.isdir(search_path):
-                for path in pathlib.Path(search_path).rglob('*.py'):
+        for source_dir in self.source_dirs:
+            source_path = pathlib.Path(source_dir)
+            if source_path.is_dir():
+                for path in source_path.rglob('*.py'):
                     py_files.append(str(path))
-
-        # Also include src/ if it exists
-        src_path = pathlib.Path('src')
-        if src_path.exists():
-            for path in src_path.rglob('*.py'):
-                py_files.append(str(path))
 
         if not py_files:
             return sorted(test_modules)
@@ -290,7 +287,13 @@ class RutRunner:
                 imports = module_set.mod_imports(mod_fqn)
                 results.append({'module': mod_fqn, 'imports': sorted(imports)})
 
-            sorted_all = topological_sort(results)
+            sorted_all, levels, depths = topological_sort(results)
+
+            if self.verbose:
+                print("Import dependency ranking:")
+                for mod in sorted_all:
+                    print(f"  {mod}: level={levels[mod]}, depth={depths[mod]}")
+                print()
 
             # Build mapping from short name to full name and vice versa
             # e.g., 'test_zebra' <-> 'tests.samples.topo.test_zebra'
