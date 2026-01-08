@@ -195,6 +195,15 @@ wheels = [
 ]
 
 [[package]]
+name = "import-deps"
+version = "0.4.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/11/ac/4fdaefc0567234a90ba0fe179903f3a9ba045625e2b6bd1276ed3851f4da/import_deps-0.4.0.tar.gz", hash = "sha256:523a30a77653604699294c70a8a138b2d049c81ff6dac188e73314d6f5e6848f", size = 31691 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/82/46/332e0260af9a94fa21cb59a87c5848212fd84c8c3be46e272ac42fb7f294/import_deps-0.4.0-py3-none-any.whl", hash = "sha256:f69feeed740b0b74f587e6666282cef22084310c8fe4a509071e4645ba41524b", size = 10541 },
+]
+
+[[package]]
 name = "jaraco-classes"
 version = "3.4.0"
 source = { registry = "https://pypi.org/simple" }
@@ -475,6 +484,7 @@ version = "0.3.0.dev0"
 source = { editable = "." }
 dependencies = [
     { name = "coverage" },
+    { name = "import-deps" },
     { name = "rich" },
 ]
 
@@ -490,6 +500,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "coverage" },
+    { name = "import-deps" },
     { name = "rich", specifier = ">=14.0.0" },
 ]
 

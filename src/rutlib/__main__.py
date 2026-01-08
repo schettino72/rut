@@ -22,6 +22,7 @@ def main():
         failfast=cli.args.exitfirst,
         capture=cli.args.capture,
         warning_filters=cli.warning_filters(cli.config.get("warning_filters", [])),
+        alpha=cli.args.alpha,
     )
     suite = runner.load_tests()
     runner_class = RichTestRunner if not cli.args.no_color else None

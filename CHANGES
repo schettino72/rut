@@ -5,8 +5,11 @@ Changes
 0.3.0 (*unreleased*)
 ====================
 
--
+- Topological test ordering by import dependencies (dependencies run first).
+- Added `--alpha` / `-a` flag to use alphabetical ordering instead.
+- Added `--version` / `-V` flag.
 - Colorized test output using `rich`.
+- Logging output is now captured along with stdout/stderr.
 
 0.2.1 (2025-07-06)
 ====================

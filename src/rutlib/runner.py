@@ -2,13 +2,17 @@
 RUT - test runner
 """
 
-import gc
-import inspect
-import warnings
-import unittest
-import importlib.util
 import asyncio
+import gc
+import importlib.util
+import inspect
 import os
+import pathlib
+import unittest
+import warnings
+
+from import_deps import ModuleSet
+from import_deps.__main__ import topological_sort
 from rich import print
 from rich.panel import Panel
 
@@ -90,13 +94,14 @@ class WarningCollector:
 
 
 class RutRunner:
-    def __init__(self, test_path, test_base_dir, keyword, failfast, capture, warning_filters):
+    def __init__(self, test_path, test_base_dir, keyword, failfast, capture, warning_filters, alpha=False):
         self.test_path = test_path
         self.test_base_dir = test_base_dir
         self.keyword = keyword
         self.failfast = failfast
         self.capture = capture
         self.warning_filters = warning_filters
+        self.alpha = alpha
         self.conftest = self._load_conftest()
 
     def _load_conftest(self):
@@ -223,14 +228,102 @@ class RutRunner:
                 flat.addTest(test)
         return flat
 
-    @classmethod
-    def sort_tests(cls, suite):
-        """sort test by module / position(line) in module
+    def sort_tests(self, suite):
+        """Sort tests by topological order of import dependencies.
 
-        Default is to execute in alphabetical order :/
+        Tests for modules with fewer dependencies run first.
+        Within each module, tests run in source line order.
+
+        If self.alpha is True, use alphabetical ordering instead.
         """
-        flat_suite = cls.flatten(suite)
+        flat_suite = self.flatten(suite)
+
+        # Group tests by module
+        tests_by_module = {}
+        for test in flat_suite:
+            mod = test.__module__
+            tests_by_module.setdefault(mod, []).append(test)
+
+        # Sort tests within each module by line number
+        for tests in tests_by_module.values():
+            tests.sort(key=self.test_pos_key)
+
+        if self.alpha:
+            # Alphabetical ordering (legacy)
+            sorted_modules = sorted(tests_by_module.keys())
+        else:
+            # Topological ordering by import dependencies
+            sorted_modules = self._get_topological_order(tests_by_module.keys())
+
+        # Build final suite
         pos_suite = unittest.TestSuite()
-        for test in sorted(flat_suite, key=cls.test_pos_key):
-            pos_suite.addTest(test)
+        for mod_name in sorted_modules:
+            if mod_name in tests_by_module:
+                for test in tests_by_module[mod_name]:
+                    pos_suite.addTest(test)
+
         return pos_suite
+
+    def _get_topological_order(self, test_modules):
+        """Get topological order of test modules based on import dependencies."""
+        # Find all .py files in test_path and test_base_dir
+        py_files = []
+        for search_path in [self.test_path, self.test_base_dir]:
+            if search_path and os.path.isdir(search_path):
+                for path in pathlib.Path(search_path).rglob('*.py'):
+                    py_files.append(str(path))
+
+        # Also include src/ if it exists
+        src_path = pathlib.Path('src')
+        if src_path.exists():
+            for path in src_path.rglob('*.py'):
+                py_files.append(str(path))
+
+        if not py_files:
+            return sorted(test_modules)
+
+        # Build module set and get imports
+        try:
+            module_set = ModuleSet(py_files)
+            results = []
+            for mod_fqn in module_set.by_name.keys():
+                imports = module_set.mod_imports(mod_fqn)
+                results.append({'module': mod_fqn, 'imports': sorted(imports)})
+
+            sorted_all = topological_sort(results)
+
+            # Build mapping from short name to full name and vice versa
+            # e.g., 'test_zebra' <-> 'tests.samples.topo.test_zebra'
+            test_modules_set = set(test_modules)
+            short_to_full = {}
+            for full_name in sorted_all:
+                short_name = full_name.rsplit('.', 1)[-1]
+                if short_name in test_modules_set:
+                    short_to_full[short_name] = full_name
+
+            # Also try exact match for fully qualified test module names
+            for mod in test_modules:
+                if mod in sorted_all:
+                    short_to_full[mod] = mod
+
+            # Build result in topological order
+            sorted_test_modules = []
+            seen = set()
+            for full_name in sorted_all:
+                short_name = full_name.rsplit('.', 1)[-1]
+                # Check both short and full name matches
+                for test_mod in test_modules:
+                    if test_mod not in seen:
+                        if test_mod == full_name or test_mod == short_name:
+                            sorted_test_modules.append(test_mod)
+                            seen.add(test_mod)
+
+            # Add any test modules not found in the graph (isolated)
+            for mod in sorted(test_modules):
+                if mod not in seen:
+                    sorted_test_modules.append(mod)
+
+            return sorted_test_modules
+        except Exception:
+            # Fallback to alphabetical if import analysis fails
+            return sorted(test_modules)

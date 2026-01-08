@@ -14,6 +14,7 @@
 - **Blazingly Fast (to type):** `rut` is only 3 characters.
 - Built-in support for async code.
 - Test discovery with keyword-based filtering.
+- Topological test ordering by import dependencies.
 - Code coverage support.
 
 ## Why use `rut`?
@@ -64,7 +65,9 @@ rut -k "feature"
 | `--keyword` | `-k` | Only run tests that match the given keyword. |
 | `--exitfirst` | `-x` | Exit on the first failure. |
 | `--capture` | `-s` | Disable all output capturing. |
+| `--alpha` | `-a` | Sort tests alphabetically instead of by import dependencies. |
 | `--cov` | | Run with code coverage. |
+| `--version` | `-V` | Show version and exit. |
 | `--test-base-dir` | | The base directory for `conftest.py` discovery. |
 
 ### Positional Arguments

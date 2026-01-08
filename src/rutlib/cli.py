@@ -31,6 +31,8 @@ class RutCLI:
             'test_path', nargs='?', type=str, default=None, help='Path to tests.'
         )
         parser.add_argument('--no-color', action='store_true', help='Disable color output.')
+        parser.add_argument('-a', '--alpha', action='store_true',
+                            help='Sort tests alphabetically instead of by import dependencies')
         return parser.parse_args()
 
     @property

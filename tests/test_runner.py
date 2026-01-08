@@ -172,7 +172,6 @@ class TestLoggingCapture(unittest.TestCase):
 
     def test_logging_output_captured_with_rich_runner(self):
         """Test that logging output is captured when buffer=True with RichTestRunner."""
-        import io
         from io import StringIO
 
         logging.basicConfig(level=logging.INFO, force=True)
@@ -187,10 +186,48 @@ class TestLoggingCapture(unittest.TestCase):
         try:
             sys.stderr = captured_stderr
             runner = RichTestRunner(buffer=True)
-            result = runner.run(LoggingTest('test_with_logging'))
+            runner.run(LoggingTest('test_with_logging'))
         finally:
             sys.stderr = original_stderr
 
         leaked_output = captured_stderr.getvalue()
         self.assertNotIn("This log message should be captured", leaked_output,
                          "Logging output leaked to stderr instead of being captured")
+
+
+class TestTopologicalSorting(unittest.TestCase):
+    """Tests for topological sorting of test modules.
+
+    Uses tests/samples/topo/ which has:
+    - test_zebra.py: no imports (leaf)
+    - test_middle.py: imports test_zebra
+    - test_apple.py: imports test_middle
+
+    Alphabetical order: test_apple, test_middle, test_zebra
+    Topological order: test_zebra, test_middle, test_apple
+    """
+
+    def test_alpha_flag_uses_alphabetical_order(self):
+        """Test that --alpha flag produces alphabetical order."""
+        runner = RutRunner('tests/samples/topo', 'tests', None, False, False, [], alpha=True)
+        suite = runner.load_tests(pattern="test*.py")
+
+        modules = [test.__module__ for test in suite]
+        self.assertEqual(modules, [
+            'test_apple',
+            'test_middle',
+            'test_zebra',
+        ])
+
+    def test_default_uses_topological_order(self):
+        """Test that default (no --alpha) produces topological order."""
+        runner = RutRunner('tests/samples/topo', 'tests', None, False, False, [], alpha=False)
+        suite = runner.load_tests(pattern="test*.py")
+
+        modules = [test.__module__ for test in suite]
+        # Dependencies first: zebra -> middle -> apple
+        self.assertEqual(modules, [
+            'test_zebra',
+            'test_middle',
+            'test_apple',
+        ])
