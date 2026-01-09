@@ -197,20 +197,11 @@ wheels = [
 [[package]]
 name = "import-deps"
 version = "0.5.1"
-source = { editable = "../import-deps" }
-
-[package.metadata]
-requires-dist = [
-    { name = "coverage", marker = "extra == 'dev'" },
-    { name = "doit", marker = "extra == 'dev'" },
-    { name = "doit-py", marker = "extra == 'dev'" },
-    { name = "pyflakes", marker = "extra == 'dev'" },
-    { name = "pytest", marker = "extra == 'dev'" },
-    { name = "pytest-cov", marker = "extra == 'dev'" },
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/c4/b3/5d222a4595ba308d56c3b60f26c02227ebd28784cb5fb4f8ef9eb4dc46a8/import_deps-0.5.1.tar.gz", hash = "sha256:57ef3401078e7cdd1152c6be15bcc5cdc9582ab915d9cb6409da2311c07c317f", size = 12692 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/25/b4/83fc93d68ca4ad473ff38294666359cb0c8381d2b2ef9012bde6b2c577ab/import_deps-0.5.1-py3-none-any.whl", hash = "sha256:06af9c06fa514368666fd3f81c881f09382ac3b363d183a8b2555c6a5dea6bdc", size = 14524 },
 ]
-
-[package.metadata.requires-dev]
-dev = [{ name = "twine", specifier = ">=6.2.0" }]
 
 [[package]]
 name = "jaraco-classes"
@@ -509,7 +500,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "coverage" },
-    { name = "import-deps", editable = "../import-deps" },
+    { name = "import-deps", specifier = ">=0.5.1" },
     { name = "rich", specifier = ">=14.0.0" },
 ]
 

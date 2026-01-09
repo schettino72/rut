@@ -28,6 +28,7 @@ jobs:
           cache-local-path: ".cache/uv"
 
     - name: Install dependencies
+      # --no-sources: ignore [tool.uv.sources], use PyPI. See README-DEV.md
       run: |
         uv sync --locked --dev --no-sources
 
