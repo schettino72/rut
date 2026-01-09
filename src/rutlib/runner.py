@@ -223,8 +223,13 @@ class RutRunner:
             if fp in filepath_to_module:
                 modified_modules.add(filepath_to_module[fp])
 
+        if self.verbose:
+            print("[DEBUG --changed] Modified files:", modified_files)
+            print("[DEBUG --changed] Modified modules:", modified_modules)
+
         # Build mapping: short module name -> full module name
         short_to_full = {}
+        seen_modules = set()
         for mod_name in self.module_all_imports:
             short_name = mod_name.rsplit('.', 1)[-1]
             if short_name not in short_to_full:
@@ -250,6 +255,10 @@ class RutRunner:
                     full_module in modified_modules or
                     bool(all_imports & modified_modules)
                 )
+
+                if self.verbose and full_module not in seen_modules:
+                    print(f"[DEBUG] {full_module}: deps={all_imports}, affected={test_affected}")
+                    seen_modules.add(full_module)
 
                 if test_affected:
                     filtered.addTest(test)
@@ -368,7 +377,6 @@ class RutRunner:
 
             # Build mapping: short name -> full name for matching test modules
             # unittest may load as 'test_zebra' or 'tests.samples.topo.test_zebra'
-            test_modules_set = set(test_modules)
             sorted_test_modules = []
             seen = set()
 
