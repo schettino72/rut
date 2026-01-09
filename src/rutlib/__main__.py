@@ -2,6 +2,7 @@ import os
 import sys
 import shutil
 import coverage
+from .cache import update_cache
 from .cli import RutCLI, RichTestRunner
 from .runner import RutRunner
 
@@ -25,6 +26,7 @@ def main():
         alpha=cli.args.alpha,
         source_dirs=cli.coverage_source,
         verbose=cli.args.verbose,
+        changed=cli.args.changed,
     )
     suite = runner.load_tests()
 
@@ -43,6 +45,9 @@ def main():
         cov.report(show_missing=True)
 
     if result.wasSuccessful():
+        # Only update cache if tests actually ran
+        if result.testsRun > 0:
+            update_cache(cli.coverage_source)
         sys.exit(0)
     else:
         sys.exit(1)

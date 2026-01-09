@@ -37,6 +37,8 @@ class RutCLI:
                             help='List tests in execution order without running them')
         parser.add_argument('-v', '--verbose', action='store_true',
                             help='Show verbose output including import dependency ranking')
+        parser.add_argument('-c', '--changed', action='store_true',
+                            help='Run tests only from files changed since last successful run')
         return parser.parse_args()
 
     @property
@@ -149,9 +151,10 @@ class RichTestResult(unittest.TestResult):
 
 
 class RichTestRunner:
-    def __init__(self, failfast=False, buffer=False):
+    def __init__(self, failfast=False, buffer=False, skipped_modules=None):
         self.failfast = failfast
         self.buffer = buffer
+        self.skipped_modules = skipped_modules or {}
         # Use sys.__stdout__ to bypass capture - test progress should always be visible
         self.console = Console(file=sys.__stdout__)
 
@@ -159,6 +162,10 @@ class RichTestRunner:
         result = RichTestResult(self.console, self.buffer, 0)
         result.failfast = self.failfast
         result.buffer = self.buffer
+
+        # Print skipped (up-to-date) modules first
+        for module, count in self.skipped_modules.items():
+            self.console.print(f"[yellow]⚡[/yellow] {module} ({count})")
 
         start_time = time.time()
         suite.run(result)

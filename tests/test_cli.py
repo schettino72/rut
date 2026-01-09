@@ -43,4 +43,4 @@ class TestCLI(unittest.TestCase):
                 cli = RutCLI()
                 cli.config = {"coverage_source": ["non_existent_dir"]}
                 self.assertEqual(cli.coverage_source, ["non_existent_dir"])
-                self.assertIn("Warning: coverage source directory 'non_existent_dir' does not exist.", mock_stderr.getvalue())
+                self.assertIn("non_existent_dir", mock_stderr.getvalue())

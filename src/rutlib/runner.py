@@ -16,6 +16,8 @@ from import_deps.__main__ import topological_sort
 from rich import print
 from rich.panel import Panel
 
+from .cache import get_modified_files
+
 
 class RutError(Exception):
     """Base exception for the rut runner."""
@@ -94,7 +96,7 @@ class WarningCollector:
 
 
 class RutRunner:
-    def __init__(self, test_path, test_base_dir, keyword, failfast, capture, warning_filters, alpha=False, source_dirs=None, verbose=False):
+    def __init__(self, test_path, test_base_dir, keyword, failfast, capture, warning_filters, alpha=False, source_dirs=None, verbose=False, changed=False):
         self.test_path = test_path
         self.test_base_dir = test_base_dir
         self.keyword = keyword
@@ -104,6 +106,8 @@ class RutRunner:
         self.alpha = alpha
         self.source_dirs = source_dirs or ["src", "tests"]
         self.verbose = verbose
+        self.changed = changed
+        self.module_filepaths = {}
         self.conftest = self._load_conftest()
 
     def _load_conftest(self):
@@ -149,6 +153,11 @@ class RutRunner:
         suite = self.sort_tests(suite)
         if self.keyword:
             suite = self._filter_keyword(suite, self.keyword)
+        if self.changed:
+            modified_files = get_modified_files(self.source_dirs)
+            suite, self.skipped_modules = self._filter_modified(suite, modified_files)
+        else:
+            self.skipped_modules = {}
         self._check_async(suite)
         return suite
 
@@ -159,6 +168,7 @@ class RutRunner:
                 runner = runner_class(
                     failfast=self.failfast,
                     buffer=not self.capture,
+                    skipped_modules=self.skipped_modules,
                 )
             else:
                 runner = unittest.TextTestRunner(
@@ -195,6 +205,42 @@ class RutRunner:
                 if keyword in test_id:
                     filtered.addTest(test)
         return filtered
+
+    def _filter_modified(self, suite, modified_files, skipped=None):
+        """Filter suite to only include tests from modified files.
+
+        Returns (filtered_suite, skipped_modules) where skipped_modules is
+        a dict of module_name -> test_count for unchanged modules.
+        """
+        if skipped is None:
+            skipped = {}
+
+        # Build set of modified filepaths for fast lookup
+        modified_set = set(modified_files)
+
+        # Build reverse mapping: short module name -> filepath
+        # to handle unittest's module naming (may be short or full)
+        module_to_filepath = {}
+        for mod_name, filepath in getattr(self, 'module_filepaths', {}).items():
+            module_to_filepath[mod_name] = filepath
+            short_name = mod_name.rsplit('.', 1)[-1]
+            if short_name not in module_to_filepath:
+                module_to_filepath[short_name] = filepath
+
+        filtered = unittest.TestSuite()
+        for test in suite:
+            if isinstance(test, unittest.TestSuite):
+                sub_filtered, _ = self._filter_modified(test, modified_files, skipped)
+                filtered.addTests(sub_filtered)
+            else:
+                # Get filepath for this test's module
+                filepath = module_to_filepath.get(test.__module__)
+                if filepath and filepath in modified_set:
+                    filtered.addTest(test)
+                else:
+                    # Track skipped modules
+                    skipped[test.__module__] = skipped.get(test.__module__, 0) + 1
+        return filtered, skipped
 
     @classmethod
     def _check_async(cls, suite):
@@ -283,38 +329,33 @@ class RutRunner:
         try:
             module_set = ModuleSet(py_files)
             results = []
-            for mod_fqn in module_set.by_name.keys():
+            for mod_fqn, mod in module_set.by_name.items():
                 imports = module_set.mod_imports(mod_fqn)
-                results.append({'module': mod_fqn, 'imports': sorted(imports)})
+                results.append({
+                    'module': mod_fqn,
+                    'filepath': str(mod.path),
+                    'imports': sorted(imports),
+                })
 
-            sorted_all, levels, depths = topological_sort(results)
+            sort_result = topological_sort(results)
 
             if self.verbose:
                 print("Import dependency ranking:")
-                for mod in sorted_all:
-                    print(f"  {mod}: level={levels[mod]}, depth={depths[mod]}")
+                for mod in sort_result.modules:
+                    print(f"  {mod}: level={sort_result.levels[mod]}, depth={sort_result.depths[mod]}")
                 print()
 
-            # Build mapping from short name to full name and vice versa
-            # e.g., 'test_zebra' <-> 'tests.samples.topo.test_zebra'
+            # Store filepaths mapping for use in _filter_modified
+            self.module_filepaths = sort_result.filepaths
+
+            # Build mapping: short name -> full name for matching test modules
+            # unittest may load as 'test_zebra' or 'tests.samples.topo.test_zebra'
             test_modules_set = set(test_modules)
-            short_to_full = {}
-            for full_name in sorted_all:
-                short_name = full_name.rsplit('.', 1)[-1]
-                if short_name in test_modules_set:
-                    short_to_full[short_name] = full_name
-
-            # Also try exact match for fully qualified test module names
-            for mod in test_modules:
-                if mod in sorted_all:
-                    short_to_full[mod] = mod
-
-            # Build result in topological order
             sorted_test_modules = []
             seen = set()
-            for full_name in sorted_all:
+
+            for full_name in sort_result.modules:
                 short_name = full_name.rsplit('.', 1)[-1]
-                # Check both short and full name matches
                 for test_mod in test_modules:
                     if test_mod not in seen:
                         if test_mod == full_name or test_mod == short_name:
