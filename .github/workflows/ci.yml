@@ -9,6 +9,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      UV_NO_SOURCES: true  # ignore [tool.uv.sources], use PyPI. See README-DEV.md
     strategy:
       matrix:
         python-version: ["3.12", "3.13"]
@@ -28,9 +30,8 @@ jobs:
           cache-local-path: ".cache/uv"
 
     - name: Install dependencies
-      # --no-sources: ignore [tool.uv.sources], use PyPI. See README-DEV.md
       run: |
-        uv sync --locked --dev --no-sources
+        uv sync --dev
 
     - name: Lint with ruff
       id: lint
