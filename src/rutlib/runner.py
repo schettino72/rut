@@ -11,8 +11,7 @@ import pathlib
 import unittest
 import warnings
 
-from import_deps import ModuleSet
-from import_deps.__main__ import topological_sort, get_all_imports
+from import_deps import ModuleSet, topological_sort, get_all_imports
 from rich import print
 from rich.panel import Panel
 
