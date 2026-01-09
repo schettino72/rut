@@ -39,6 +39,9 @@ dev = [
     "twine>=6.1.0",
 ]
 
+[tool.rut]
+coverage_source = ["src", "tests", "manual_tests"]
+
 [tool.uv]
 package = true
 

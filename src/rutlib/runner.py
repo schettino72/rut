@@ -12,7 +12,7 @@ import unittest
 import warnings
 
 from import_deps import ModuleSet
-from import_deps.__main__ import topological_sort
+from import_deps.__main__ import topological_sort, get_all_imports
 from rich import print
 from rich.panel import Panel
 
@@ -108,6 +108,7 @@ class RutRunner:
         self.verbose = verbose
         self.changed = changed
         self.module_filepaths = {}
+        self.module_all_imports = {}
         self.conftest = self._load_conftest()
 
     def _load_conftest(self):
@@ -207,7 +208,7 @@ class RutRunner:
         return filtered
 
     def _filter_modified(self, suite, modified_files, skipped=None):
-        """Filter suite to only include tests from modified files.
+        """Filter suite to only include tests from modified files or their dependencies.
 
         Returns (filtered_suite, skipped_modules) where skipped_modules is
         a dict of module_name -> test_count for unchanged modules.
@@ -215,17 +216,19 @@ class RutRunner:
         if skipped is None:
             skipped = {}
 
-        # Build set of modified filepaths for fast lookup
-        modified_set = set(modified_files)
+        # Build set of modified module names from filepaths
+        modified_modules = set()
+        filepath_to_module = {fp: mod for mod, fp in self.module_filepaths.items()}
+        for fp in modified_files:
+            if fp in filepath_to_module:
+                modified_modules.add(filepath_to_module[fp])
 
-        # Build reverse mapping: short module name -> filepath
-        # to handle unittest's module naming (may be short or full)
-        module_to_filepath = {}
-        for mod_name, filepath in getattr(self, 'module_filepaths', {}).items():
-            module_to_filepath[mod_name] = filepath
+        # Build mapping: short module name -> full module name
+        short_to_full = {}
+        for mod_name in self.module_all_imports:
             short_name = mod_name.rsplit('.', 1)[-1]
-            if short_name not in module_to_filepath:
-                module_to_filepath[short_name] = filepath
+            if short_name not in short_to_full:
+                short_to_full[short_name] = mod_name
 
         filtered = unittest.TestSuite()
         for test in suite:
@@ -233,12 +236,24 @@ class RutRunner:
                 sub_filtered, _ = self._filter_modified(test, modified_files, skipped)
                 filtered.addTests(sub_filtered)
             else:
-                # Get filepath for this test's module
-                filepath = module_to_filepath.get(test.__module__)
-                if filepath and filepath in modified_set:
+                # Get the full module name for this test
+                test_module = test.__module__
+                full_module = short_to_full.get(test_module, test_module)
+
+                # Get all transitive imports for this test module
+                all_imports = self.module_all_imports.get(full_module, set())
+
+                # Test is affected if:
+                # 1. Test file itself is modified, OR
+                # 2. Any transitive import is modified
+                test_affected = (
+                    full_module in modified_modules or
+                    bool(all_imports & modified_modules)
+                )
+
+                if test_affected:
                     filtered.addTest(test)
                 else:
-                    # Track skipped modules
                     skipped[test.__module__] = skipped.get(test.__module__, 0) + 1
         return filtered, skipped
 
@@ -347,6 +362,9 @@ class RutRunner:
 
             # Store filepaths mapping for use in _filter_modified
             self.module_filepaths = sort_result.filepaths
+
+            # Store transitive imports for each module
+            self.module_all_imports = get_all_imports(results)
 
             # Build mapping: short name -> full name for matching test modules
             # unittest may load as 'test_zebra' or 'tests.samples.topo.test_zebra'

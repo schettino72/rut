@@ -15,6 +15,7 @@
 - Built-in support for async code.
 - Test discovery with keyword-based filtering.
 - Topological test ordering by import dependencies.
+- Incremental testing: only run tests affected by changes.
 - Code coverage support.
 
 ## Why use `rut`?
@@ -66,7 +67,9 @@ rut -k "feature"
 | `--exitfirst` | `-x` | Exit on the first failure. |
 | `--capture` | `-s` | Disable all output capturing. |
 | `--alpha` | `-a` | Sort tests alphabetically instead of by import dependencies. |
+| `--changed` | `-c` | Only run tests affected by file changes since last successful run. |
 | `--dry-run` | | List tests in execution order without running them. |
+| `--verbose` | `-v` | Show import dependency ranking. |
 | `--cov` | | Run with code coverage. |
 | `--version` | `-V` | Show version and exit. |
 | `--test-base-dir` | | The base directory for `conftest.py` discovery. |
@@ -139,6 +142,22 @@ class MyAsyncTest(unittest.IsolatedAsyncioTestCase):
 ```
 
 ## Advanced
+
+### Incremental Testing
+
+Use the `--changed` flag to only run tests affected by file changes since the last successful test run. This includes tests whose source files changed, as well as tests that depend on changed modules (transitive dependencies).
+
+```bash
+# First run builds the cache
+rut
+
+# Subsequent runs with --changed only run affected tests
+rut --changed
+```
+
+The cache is stored in `.rut_cache/` and tracks file hashes. It is only updated after a successful test run.
+
+**Note:** Files must be in directories listed in `coverage_source` config to be tracked. The default is `["src", "tests"]`.
 
 ### Session-Level Setup and Teardown
 
