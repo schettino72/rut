@@ -12,11 +12,11 @@ uv run rut -k test_logging_leak manual_tests
 
 Tests transitive dependency detection: `test_main.py` → `helper.py` → `util.py`
 
-**Note:** The test folder must be in `coverage_source` config for `--changed` to work.
+**Note:** The test folder must be in `source_dirs` config for `--changed` to work.
 In `pyproject.toml`:
 ```toml
 [tool.rut]
-coverage_source = ["src", "tests", "manual_tests"]
+source_dirs = ["src", "tests", "manual_tests"]
 ```
 
 ```bash

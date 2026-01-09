@@ -40,7 +40,7 @@ dev = [
 ]
 
 [tool.rut]
-coverage_source = ["src", "tests", "manual_tests"]
+source_dirs = ["src", "tests", "manual_tests"]
 
 [tool.uv]
 package = true

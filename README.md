@@ -84,13 +84,13 @@ rut -k "feature"
 
 `rut` can be configured via the `[tool.rut]` section in your `pyproject.toml` file.
 
-### `coverage_source`
+### `source_dirs`
 
-To specify the source directories for coverage reporting, use the `coverage_source` key. If not configured, the default source is `["src", "tests"]`.
+Specifies the source directories for coverage reporting, incremental testing (`--changed`), and import dependency analysis. If not configured, the default is `["src", "tests"]`.
 
 ```toml
 [tool.rut]
-coverage_source = ["my_app", "libs/my_lib"]
+source_dirs = ["my_app", "libs/my_lib"]
 ```
 
 ### `warning_filters`
@@ -157,7 +157,7 @@ rut --changed
 
 The cache is stored in `.rut_cache/` and tracks file hashes. It is only updated after a successful test run.
 
-**Note:** Files must be in directories listed in `coverage_source` config to be tracked. The default is `["src", "tests"]`.
+**Note:** Files must be in directories listed in `source_dirs` config to be tracked. The default is `["src", "tests"]`.
 
 ### Session-Level Setup and Teardown
 

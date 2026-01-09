@@ -25,22 +25,37 @@ class TestCLI(unittest.TestCase):
             self.assertEqual(filters[1]['category'], DeprecationWarning)
             self.assertEqual(filters[1]['module'], '')
 
-    def test_coverage_source_from_config(self):
+    def test_source_dirs_from_config(self):
         with patch('argparse.ArgumentParser.parse_args') as mock_parse_args:
             mock_parse_args.return_value = unittest.mock.Mock(
                 keyword=None, exitfirst=False, capture=False, cov=False, test_path='tests'
             )
             cli = RutCLI()
-            cli.config = {"coverage_source": ["source1", "source2"]}
-            self.assertEqual(cli.coverage_source, ["source1", "source2"])
+            cli.config = {"source_dirs": ["source1", "source2"]}
+            self.assertEqual(cli.source_dirs, ["source1", "source2"])
 
-    def test_warns_on_missing_coverage_source(self):
+    def test_coverage_source_deprecated_alias(self):
+        with patch('argparse.ArgumentParser.parse_args') as mock_parse_args:
+            mock_parse_args.return_value = unittest.mock.Mock(
+                keyword=None, exitfirst=False, capture=False, cov=False, test_path='tests'
+            )
+            import warnings
+            with warnings.catch_warnings(record=True) as w:
+                warnings.simplefilter("always")
+                cli = RutCLI()
+                cli.config = {"coverage_source": ["source1", "source2"]}
+                self.assertEqual(cli.source_dirs, ["source1", "source2"])
+                self.assertEqual(len(w), 1)
+                self.assertTrue(issubclass(w[0].category, DeprecationWarning))
+                self.assertIn("deprecated", str(w[0].message))
+
+    def test_warns_on_missing_source_dir(self):
         with patch('argparse.ArgumentParser.parse_args') as mock_parse_args:
             mock_parse_args.return_value = unittest.mock.Mock(
                 keyword=None, exitfirst=False, capture=False, cov=False, test_path='tests'
             )
             with patch('sys.stderr', new_callable=StringIO) as mock_stderr:
                 cli = RutCLI()
-                cli.config = {"coverage_source": ["non_existent_dir"]}
-                self.assertEqual(cli.coverage_source, ["non_existent_dir"])
+                cli.config = {"source_dirs": ["non_existent_dir"]}
+                self.assertEqual(cli.source_dirs, ["non_existent_dir"])
                 self.assertIn("non_existent_dir", mock_stderr.getvalue())

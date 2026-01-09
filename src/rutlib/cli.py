@@ -7,6 +7,7 @@ import sys
 import time
 import tomllib
 import unittest
+import warnings
 from rich.console import Console
 from rich.panel import Panel
 
@@ -56,18 +57,34 @@ class RutCLI:
             return {}
 
     @property
-    def coverage_source(self):
-        # Default coverage source
-        cov_source = self.config.get("coverage_source", ["src", "tests"])
+    def source_dirs(self):
+        # Check for new config name first
+        if "source_dirs" in self.config:
+            dirs = self.config["source_dirs"]
+        elif "coverage_source" in self.config:
+            # Deprecated alias
+            warnings.warn(
+                "'coverage_source' is deprecated, use 'source_dirs' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            dirs = self.config["coverage_source"]
+        else:
+            dirs = ["src", "tests"]
 
         # Check for non-existent source directories
-        for source_dir in cov_source:
+        for source_dir in dirs:
             if not os.path.isdir(source_dir):
                 print(
-                    f"Warning: coverage source directory '{source_dir}' does not exist.",
+                    f"Warning: source directory '{source_dir}' does not exist.",
                     file=sys.stderr,
                 )
-        return cov_source
+        return dirs
+
+    @property
+    def coverage_source(self):
+        """Deprecated alias for source_dirs."""
+        return self.source_dirs
 
     def warning_filters(self, filters_spec):
         """
