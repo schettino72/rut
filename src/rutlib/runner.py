@@ -223,8 +223,8 @@ class RutRunner:
                 modified_modules.add(filepath_to_module[fp])
 
         if self.verbose:
-            print("[DEBUG --changed] Modified files:", modified_files)
             print("[DEBUG --changed] Modified modules:", modified_modules)
+            print("[DEBUG --changed] All tracked modules:", set(self.module_filepaths.keys()))
 
         # Build mapping: short module name -> full module name
         short_to_full = {}

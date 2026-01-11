@@ -7,6 +7,17 @@ from .cli import RutCLI, RichTestRunner
 from .runner import RutRunner
 
 
+def should_update_cache(result, keyword) -> bool:
+    """Determine if cache should be updated after test run.
+
+    Cache is updated only when:
+    - Tests passed
+    - At least one test ran
+    - No -k filter was used (partial runs shouldn't update cache)
+    """
+    return result.wasSuccessful() and result.testsRun > 0 and not keyword
+
+
 def main():
     sys.path.insert(0, os.getcwd())
     os.environ['TEST_RUNNER'] = 'rut'
@@ -45,8 +56,7 @@ def main():
         cov.report(show_missing=True)
 
     if result.wasSuccessful():
-        # Only update cache if tests actually ran
-        if result.testsRun > 0:
+        if should_update_cache(result, cli.args.keyword):
             update_cache(cli.coverage_source)
         sys.exit(0)
     else:

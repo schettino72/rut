@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 from rutlib.cache import compute_hash, load_cache, save_cache, get_modified_files, update_cache, CACHE_DIR, CACHE_FILE
+from rutlib.__main__ import should_update_cache
 
 
 class TestComputeHash(unittest.TestCase):
@@ -109,3 +110,30 @@ class TestUpdateCache(unittest.TestCase):
                 file_path = str(self.src_dir / 'module.py')
                 self.assertIn(file_path, loaded)
                 self.assertEqual(len(loaded[file_path]), 64)
+
+
+class MockResult:
+    def __init__(self, successful, tests_run):
+        self._successful = successful
+        self.testsRun = tests_run
+
+    def wasSuccessful(self):
+        return self._successful
+
+
+class TestShouldUpdateCache(unittest.TestCase):
+    def test_no_update_when_keyword_filter_used(self):
+        result = MockResult(successful=True, tests_run=5)
+        self.assertFalse(should_update_cache(result, keyword="some_test"))
+
+    def test_update_when_no_keyword_filter(self):
+        result = MockResult(successful=True, tests_run=5)
+        self.assertTrue(should_update_cache(result, keyword=None))
+
+    def test_no_update_when_tests_failed(self):
+        result = MockResult(successful=False, tests_run=5)
+        self.assertFalse(should_update_cache(result, keyword=None))
+
+    def test_no_update_when_no_tests_ran(self):
+        result = MockResult(successful=True, tests_run=0)
+        self.assertFalse(should_update_cache(result, keyword=None))
