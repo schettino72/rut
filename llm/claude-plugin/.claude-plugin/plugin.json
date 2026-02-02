@@ -1,0 +1,9 @@
+{
+  "name": "rut-testing",
+  "description": "Use rut test runner for running Python unittest tests",
+  "version": "1.0.0",
+  "repository": "https://github.com/schettino72/rut",
+  "author": {
+    "name": "Eduardo Schettino"
+  }
+}

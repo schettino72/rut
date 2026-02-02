@@ -1,0 +1,16 @@
+{
+  "name": "rut",
+  "owner": {
+    "name": "Eduardo Schettino"
+  },
+  "metadata": {
+    "description": "Plugins for the rut test runner"
+  },
+  "plugins": [
+    {
+      "name": "rut-testing",
+      "source": "./llm/claude-plugin",
+      "description": "Use rut test runner for running Python unittest tests"
+    }
+  ]
+}

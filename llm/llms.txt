@@ -1,0 +1,57 @@
+# rut - Run Unit Tests
+
+> A modern test runner for Python's unittest framework
+
+- Repository: https://github.com/schettino72/rut
+- Full docs: [llms-full.txt](llms-full.txt)
+
+## Overview
+
+`rut` is a drop-in replacement for running unittest tests with modern features:
+- Blazingly fast to type (only 3 characters)
+- Built-in async support
+- Keyword-based test filtering
+- Topological test ordering by import dependencies
+- Incremental testing (only run affected tests)
+- Code coverage support
+
+## Installation
+
+```bash
+uv add --dev rut
+```
+
+## Quick Start
+
+```bash
+rut                      # Run all tests
+rut -k "feature"         # Run tests matching keyword
+rut --changed            # Run only affected tests
+rut -x                   # Stop on first failure
+rut -s                   # Show print output
+rut --cov                # Run with coverage
+```
+
+## Documentation
+
+- [README](https://github.com/schettino72/rut#readme): Full documentation
+- [PyPI](https://pypi.org/project/rut/): Package page
+
+## Configuration
+
+Configure via `[tool.rut]` in `pyproject.toml`:
+
+```toml
+[tool.rut]
+source_dirs = ["src", "tests"]  # Directories to track
+test_base_dir = "tests"          # conftest.py location
+warning_filters = ["error::UserWarning:pydantic"]
+```
+
+## Writing Tests
+
+Use standard `unittest.TestCase` for sync tests and `unittest.IsolatedAsyncioTestCase` for async tests.
+
+## Session Hooks
+
+Define `rut_session_setup()` and `rut_session_teardown()` in `tests/conftest.py` for session-level setup/teardown.

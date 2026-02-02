@@ -198,14 +198,13 @@ if os.environ.get('TEST_RUNNER') == 'rut':
     pass
 ```
 
-### Claude Code Skill
+### Claude Code Plugin
 
-A [Claude Code](https://claude.com/claude-code) skill is included in the `claude-skill/` folder. This teaches Claude to use `rut` instead of `pytest` when running tests.
+A [Claude Code](https://claude.com/claude-code) plugin is included in the `llm/claude-plugin/` folder. This teaches Claude to use `rut` for running tests.
 
-To install, symlink the skill to your Claude Code skills directory:
-
-```bash
-ln -s /path/to/rut/claude-skill ~/.claude/skills/rut-testing
+```
+/plugin marketplace add schettino72/rut
+/plugin install rut-testing@rut
 ```
 
 ## License

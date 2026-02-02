@@ -1,0 +1,6 @@
+- [ ] Configuration Over Hardcoding: The WarningCollector has a hardcoded filter for
+      pydantic UserWarnings. In a real-world scenario, users would want to configure
+      this.
+       * Suggestion: Consider allowing users to configure warning filters through
+         command-line arguments (e.g., --warn-error "pydantic.*") or a configuration
+         section in pyproject.toml.

@@ -7,7 +7,6 @@
 ## Project Overview
 
 **Repository:** https://github.com/schettino72/rut
-**Version:** 0.3.0.dev0
 **License:** MIT
 **Author:** Eduardo Naufel Schettino
 **Python Requirements:** >=3.12
@@ -18,6 +17,8 @@
 - **Blazingly Fast (to type):** `rut` is only 3 characters.
 - Built-in support for async code.
 - Test discovery with keyword-based filtering.
+- Topological test ordering by import dependencies.
+- Incremental testing: only run tests affected by changes.
 - Code coverage support.
 
 ## Why use `rut`?
@@ -68,7 +69,12 @@ rut -k "feature"
 | `--keyword` | `-k` | Only run tests that match the given keyword. |
 | `--exitfirst` | `-x` | Exit on the first failure. |
 | `--capture` | `-s` | Disable all output capturing. |
+| `--alpha` | `-a` | Sort tests alphabetically instead of by import dependencies. |
+| `--changed` | `-c` | Only run tests affected by file changes since last successful run. |
+| `--dry-run` | | List tests in execution order without running them. |
+| `--verbose` | `-v` | Show import dependency ranking. |
 | `--cov` | | Run with code coverage. |
+| `--version` | `-V` | Show version and exit. |
 | `--test-base-dir` | | The base directory for `conftest.py` discovery. |
 
 ### Positional Arguments
@@ -81,13 +87,13 @@ rut -k "feature"
 
 `rut` can be configured via the `[tool.rut]` section in your `pyproject.toml` file.
 
-### `coverage_source`
+### `source_dirs`
 
-To specify the source directories for coverage reporting, use the `coverage_source` key. If not configured, the default source is `["src", "tests"]`.
+Specifies the source directories for coverage reporting, incremental testing (`--changed`), and import dependency analysis. If not configured, the default is `["src", "tests"]`.
 
 ```toml
 [tool.rut]
-coverage_source = ["my_app", "libs/my_lib"]
+source_dirs = ["my_app", "libs/my_lib"]
 ```
 
 ### `warning_filters`
@@ -139,6 +145,22 @@ class MyAsyncTest(unittest.IsolatedAsyncioTestCase):
 ```
 
 ## Advanced
+
+### Incremental Testing
+
+Use the `--changed` flag to only run tests affected by file changes since the last successful test run. This includes tests whose source files changed, as well as tests that depend on changed modules (transitive dependencies).
+
+```bash
+# First run builds the cache
+rut
+
+# Subsequent runs with --changed only run affected tests
+rut --changed
+```
+
+The cache is stored in `.rut_cache/` and tracks file hashes. It is only updated after a successful test run.
+
+**Note:** Files must be in directories listed in `source_dirs` config to be tracked. The default is `["src", "tests"]`.
 
 ### Session-Level Setup and Teardown
 
@@ -202,13 +224,13 @@ rut/
 #### RutCLI (`cli.py`)
 - Handles command-line argument parsing
 - Loads configuration from `pyproject.toml`
-- Manages test base directory and coverage source settings
+- Manages test base directory and source directories settings
 - Supports color output control
 
 Key methods:
 - `parse_args()`: Parses command-line arguments
 - `load_config()`: Loads configuration from pyproject.toml
-- Properties for `test_base_dir` and `coverage_source`
+- Properties for `test_base_dir` and `source_dirs`
 
 #### RutRunner (`runner.py`)
 - Core test execution engine
