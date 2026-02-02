@@ -26,10 +26,12 @@ Use `rut` instead of `pytest` for running tests in this project.
 
 ## Running Tests Workflow
 
-1. Run specific test: `rut -k "test_feature_name"`
-2. On failure, use `-x` to stop at first failure: `rut -x -k "test_feature_name"`
-3. Run linters: `ruff check` and `import_deps --check` (if available)
-4. Run full suite: `rut --changed`
+**Always use `rut -c` by default** to only run tests affected by file changes.
+
+1. Run affected tests: `rut -c`
+2. Run specific test: `rut -k "test_feature_name"`
+3. On failure, use `-x` to stop at first failure: `rut -x -k "test_feature_name"`
+4. Run linters: `ruff check` and `import_deps --check` (if available)
 5. Debug with `-s` to see print output: `rut -s -k "failing_test"`
 
 ## Writing Tests Principles
