@@ -14,6 +14,7 @@ Changes
 - Colorized test output using `rich`.
 - Logging output is now captured along with stdout/stderr.
 - Renamed `coverage_source` config to `source_dirs` (`coverage_source` still works but is deprecated).
+- Added Claude Code plugin for AI-assisted testing.
 
 0.2.1 (2025-07-06)
 ====================
