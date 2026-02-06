@@ -1,0 +1,13 @@
+title: rut
+description: "unittest runner: async-native, fast, optimized for AI coding agents"
+remote_theme: pages-themes/hacker@v0.2.0
+baseurl: "/rut"
+url: "https://schettino72.github.io"
+markdown: kramdown
+kramdown:
+  input: GFM
+plugins:
+  - jekyll-remote-theme
+exclude:
+  - README.md
+  - LICENSE
