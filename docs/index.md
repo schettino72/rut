@@ -13,6 +13,9 @@ title: rut - Run Unit Tests
   <a href="https://github.com/schettino72/rut/blob/main/LICENSE">
     <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License">
   </a>
+  <a href="https://github.com/schettino72/rut#readme">
+    <img src="https://img.shields.io/badge/docs-readme-blue" alt="Documentation">
+  </a>
 </div>
 
 - **Fast** — dependency-aware ordering, runs only what changed
