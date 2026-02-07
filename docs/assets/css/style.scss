@@ -3,6 +3,54 @@
 
 @import 'jekyll-theme-hacker';
 
+// Base font size
+body {
+  font-size: 1.2rem;
+}
+
+// Header title
+#a-title h1 {
+  letter-spacing: 0.05em;
+}
+
+// Hero section (2-column layout)
+.hero {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+  margin-bottom: 2rem;
+
+  @media (max-width: 600px) {
+    flex-direction: column;
+  }
+}
+
+.hero-content {
+  flex: 1;
+}
+
+.hero-logo {
+  flex-shrink: 0;
+
+  img {
+    width: 280px;
+    height: auto;
+  }
+
+  @media (max-width: 600px) {
+    img {
+      width: 200px;
+    }
+  }
+}
+
+// Main content intro list
+#main_content > ul {
+  font-size: 1.1rem;
+  line-height: 1.8;
+  margin: 1.5rem 0 2rem 0;
+}
+
 // Article cards
 .article-grid {
   display: grid;
@@ -126,6 +174,16 @@
     border-color: #444;
   }
 
+  &.feature-card-link {
+    display: block;
+    text-decoration: none;
+    cursor: pointer;
+
+    &:hover {
+      border-color: #39ff14;
+    }
+  }
+
   .feature-header {
     display: flex;
     align-items: center;
@@ -158,29 +216,57 @@
   font-weight: bold;
 }
 
-// ASCII demo area
-.demo-container {
-  background: #0a0a0a;
-  border: 1px solid #333;
-  border-radius: 8px;
-  padding: 1rem;
-  margin: 2rem 0;
-  overflow: hidden;
+// Article images
+.article-image {
+  max-width: 50%;
+  height: auto;
+  margin: 1.5rem 0;
+  border-radius: 6px;
 }
 
-.demo-header {
+// Article footer
+.article-footer {
   display: flex;
-  gap: 6px;
-  margin-bottom: 1rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid #222;
+  justify-content: space-between;
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #333;
 
-  .dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    &.red { background: #ff5f56; }
-    &.yellow { background: #ffbd2e; }
-    &.green { background: #27ca40; }
+  a {
+    color: #888;
+    text-decoration: none;
+    font-size: 0.9rem;
+
+    &:hover {
+      color: #b5e853;
+    }
   }
+}
+
+// Code blocks / terminal
+pre, code {
+  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace;
+}
+
+pre {
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 1rem;
+  overflow-x: auto;
+  font-size: 0.9rem;
+  line-height: 1.5;
+
+  code {
+    background: none;
+    padding: 0;
+    color: #c9d1d9;
+  }
+}
+
+code {
+  background: rgba(110, 118, 129, 0.2);
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+  font-size: 0.9em;
 }
