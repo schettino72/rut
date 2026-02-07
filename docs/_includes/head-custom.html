@@ -1,12 +1,13 @@
-<meta property="og:title" content="rut - Fast Python Test Runner">
-<meta property="og:description" content="Run only affected tests. Dependency-aware ordering. Built for AI coding workflows.">
-<meta property="og:image" content="https://schettino72.github.io/rut/assets/images/logo.png">
-<meta property="og:url" content="https://schettino72.github.io/rut/">
-<meta property="og:type" content="website">
+<meta property="og:title" content="{{ page.title | default: 'rut - Python Test Runner | Run Only Affected Tests' }}">
+<meta property="og:description" content="{{ page.description | default: 'Python test runner with incremental testing and dependency-aware ordering. Run only affected tests. Built for unittest and AI coding workflows.' }}">
+<meta name="keywords" content="python test runner, unittest, incremental testing, dependency testing, fast tests, AI coding, pytest alternative">
+<meta property="og:image" content="{{ page.image | default: 'https://schettino72.github.io/rut/assets/images/logo.png' }}">
+<meta property="og:url" content="{{ page.url | absolute_url }}">
+<meta property="og:type" content="{% if page.layout == 'article' %}article{% else %}website{% endif %}">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="rut - Fast Python Test Runner">
-<meta name="twitter:description" content="Run only affected tests. Dependency-aware ordering. Built for AI coding workflows.">
-<meta name="twitter:image" content="https://schettino72.github.io/rut/assets/images/logo.png">
+<meta name="twitter:title" content="{{ page.title | default: 'rut - Python Test Runner | Run Only Affected Tests' }}">
+<meta name="twitter:description" content="{{ page.description | default: 'Python test runner with incremental testing and dependency-aware ordering. Run only affected tests. Built for unittest and AI coding workflows.' }}">
+<meta name="twitter:image" content="{{ page.image | default: 'https://schettino72.github.io/rut/assets/images/logo.png' }}">
 
 <script defer src="https://api.pirsch.io/pa.js"
     id="pianjs"

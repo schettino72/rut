@@ -69,22 +69,24 @@ title: rut - Run Unit Tests
 
 <p class="section-header">What makes <span class="rut">rut</span> different</p>
 
-<div class="feature-grid grid-2x2">
+<div class="feature-list">
   <a href="{{ '/articles/dependency-ordering' | relative_url }}" class="feature-card feature-card-link">
     <div class="feature-header">
       <span class="feature-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 0 0 9 9"/></svg></span>
       <h3 class="feature-title">Dependency Ordering</h3>
     </div>
     <p class="feature-desc">Topological test ordering by import graph. Tests for broken modules fail first.</p>
+    <span class="feature-link">Read more →</span>
   </a>
 
-  <div class="feature-card">
+  <a href="{{ '/articles/incremental-testing' | relative_url }}" class="feature-card feature-card-link">
     <div class="feature-header">
       <span class="feature-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg></span>
       <h3 class="feature-title">Incremental Testing</h3>
     </div>
     <p class="feature-desc">Only run tests affected by your changes. Skip the rest.</p>
-  </div>
+    <span class="feature-link">Read more →</span>
+  </a>
 </div>
 
 <!-- Articles section - uncomment when ready

@@ -1,6 +1,7 @@
 ---
 layout: article
 title: "Why Test Order Matters: Dependency-Aware Testing"
+description: "Run foundational tests first. Fail fast, debug easier. How rut uses your import graph to order tests."
 ---
 
 When a test fails, you want to know immediately. But if your test runner executes tests in arbitrary order, you might wait minutes before seeing the failure that matters.
@@ -42,9 +43,9 @@ Topological sorting gives us: `utils → models → api`
 
 If we run tests in this order, a bug in `utils.py` fails fast — you see it in seconds, not minutes.
 
-## How rut does it
+## How <span class="rut">rut</span> does it
 
-rut analyzes your import graph at test discovery time:
+<span class="rut">rut</span> analyzes your import graph at test discovery time:
 
 ```bash
 $ rut --dry-run
