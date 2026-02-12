@@ -1,6 +1,9 @@
 import unittest
+from io import StringIO
+from rich.console import Console
 from rich.text import Text
 from rutlib.output import _clean_traceback, _colorize_diff, _test_header
+from rutlib.output import RichTestResult
 
 
 class TestCleanTraceback(unittest.TestCase):
@@ -176,3 +179,45 @@ class TestTestHeader(unittest.TestCase):
         plain = result.plain
         self.assertIn('test_foo', plain)
         self.assertIn('TestBar.test_baz', plain)
+
+
+class TestDotMode(unittest.TestCase):
+    class _Pass(unittest.TestCase):
+        def test_pass(self):
+            pass
+
+    class _Fail(unittest.TestCase):
+        def test_fail(self):
+            self.fail("boom")
+
+    def _make_result(self, verbose=False):
+        console = Console(file=StringIO(), width=80)
+        result = RichTestResult(console, buffer=False, verbose=verbose)
+        return result, console
+
+    def test_dot_on_success(self):
+        result, _ = self._make_result(verbose=False)
+        test = self._Pass('test_pass')
+        result.addSuccess(test)
+        self.assertEqual(result._dot_line.plain, '.')
+        self.assertEqual(result._dot_count, 1)
+
+    def test_dot_F_on_failure(self):
+        result, _ = self._make_result(verbose=False)
+        test = self._Fail('test_fail')
+        result.addFailure(test, (None, None, None))
+        self.assertEqual(result._dot_line.plain, 'F')
+
+    def test_dot_E_on_error(self):
+        result, _ = self._make_result(verbose=False)
+        test = self._Pass('test_pass')
+        result.addError(test, (None, None, None))
+        self.assertEqual(result._dot_line.plain, 'E')
+
+    def test_verbose_prints_full_line(self):
+        result, console = self._make_result(verbose=True)
+        test = self._Pass('test_pass')
+        result.addSuccess(test)
+        self.assertEqual(result._dot_count, 0)
+        output = console.file.getvalue()
+        self.assertIn('test_pass', output)

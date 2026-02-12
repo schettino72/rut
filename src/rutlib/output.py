@@ -194,6 +194,9 @@ class RichTestResult(unittest.TestResult):
         self.console = console
         self.verbose = verbose
         self._original_handler_streams = {}
+        self._dot_line = Text()
+        self._dot_count = 0
+        self._term_width = console.width or 80
 
     def _setupStdout(self):
         super()._setupStdout()
@@ -215,21 +218,48 @@ class RichTestResult(unittest.TestResult):
             self._original_handler_streams.clear()
         super()._restoreStdout()
 
+    def _add_dot(self, char, style):
+        self._dot_line.append(char, style=style)
+        self._dot_count += 1
+        max_dots = max(self._term_width - 10, 10)
+        if self._dot_count >= max_dots:
+            self.console.print(self._dot_line)
+            self._dot_line = Text()
+            self._dot_count = 0
+
+    def _flush_dots(self):
+        if self._dot_count > 0:
+            self.console.print(self._dot_line)
+            self._dot_line = Text()
+            self._dot_count = 0
+
     def addSuccess(self, test):
         super().addSuccess(test)
-        self.console.print(f"[green]✔[/green] {test.id()}")
+        if self.verbose:
+            self.console.print(f"[green]✔[/green] {test.id()}")
+        else:
+            self._add_dot(".", "green")
 
     def addFailure(self, test, err):
         super().addFailure(test, err)
-        self.console.print(f"[bold red]✖[/bold red] {test.id()}")
+        if self.verbose:
+            self.console.print(f"[bold red]✖[/bold red] {test.id()}")
+        else:
+            self._add_dot("F", "bold red")
 
     def addError(self, test, err):
         super().addError(test, err)
-        self.console.print(f"[bold red]✖[/bold red] {test.id()}")
+        if self.verbose:
+            self.console.print(f"[bold red]✖[/bold red] {test.id()}")
+        else:
+            self._add_dot("E", "bold red")
 
     def addSkip(self, test, reason):
         super().addSkip(test, reason)
-        self.console.print(f"[yellow]SKIP[/yellow] {test.id()}: {reason}")
+        if self.verbose:
+            self.console.print(f"[yellow]SKIP[/yellow] {test.id()}: {reason}")
+        else:
+            self._add_dot("s", "yellow")
 
     def printErrors(self):
         if not self.errors and not self.failures:
@@ -269,6 +299,7 @@ class RichTestRunner:
         stop_time = time.time()
 
         time_taken = stop_time - start_time
+        result._flush_dots()
         result.printErrors()
 
         self.console.print("\n" + ("-" * 70))
