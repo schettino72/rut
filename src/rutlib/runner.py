@@ -203,6 +203,7 @@ class RutRunner:
                     failfast=self.failfast,
                     buffer=not self.capture,
                     skipped_modules=self.skipped_modules,
+                    verbose=self.verbose,
                 )
             else:
                 runner = unittest.TextTestRunner(

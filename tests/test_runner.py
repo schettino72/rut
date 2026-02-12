@@ -74,7 +74,7 @@ class TestImportErrors(unittest.TestCase):
 
     def test_check_import_errors_noop_on_valid_suite(self):
         """_check_import_errors should do nothing for a valid suite."""
-        runner = RutRunner('tests/samples/discovery', None, False, False, [])
+        RutRunner('tests/samples/discovery', None, False, False, [])
         loader = unittest.TestLoader()
         suite = loader.discover('tests/samples/discovery', pattern='sample*.py')
         # Should not raise

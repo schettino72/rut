@@ -59,17 +59,21 @@ def _append_file_line(result, match):
     result.append('\n')
 
 
-def _colorize_diff(tb_string):
+def _colorize_diff(tb_string, verbose=False):
     """Return a rich.text.Text with colorized diff lines.
 
     When a '? ' pointer line follows a '-' or '+' line, the pointer
     characters (^, +, -, ~) mark which chars differ.  Instead of showing
     the '?' line, we highlight those chars with a background on the
     preceding line.
+
+    When verbose is False, the Traceback header is dropped and prose lines
+    between the exception and the diff are suppressed.
     """
     result = Text()
     lines = tb_string.splitlines(keepends=True)
     after_exception = False
+    has_diff = False
     i = 0
     while i < len(lines):
         stripped = lines[i].rstrip('\n')
@@ -99,7 +103,8 @@ def _colorize_diff(tb_string):
             # Orphan ? line (no preceding +/- consumed it), skip
             i += 1
         elif stripped.startswith('Traceback '):
-            # Drop the ceremony header entirely
+            if verbose:
+                result.append(stripped + '\n', style="dim")
             i += 1
         else:
             file_m = _file_re.match(stripped)
@@ -110,12 +115,19 @@ def _colorize_diff(tb_string):
                 result.append(exc_m.group(1), style="bold yellow")
                 result.append(exc_m.group(2) + '\n')
                 after_exception = True
+                has_diff = any(
+                    lines[j].rstrip('\n').startswith(('- ', '+ '))
+                    for j in range(i + 1, len(lines))
+                )
             elif stripped.startswith((' ', '\t')) and not after_exception:
-                # Indented code line (before exception)
-                result.append(stripped + '\n', style="dim")
+                # Indented code line in traceback (unstyled, distinct from dim File parts)
+                result.append(stripped + '\n')
             elif stripped.startswith((' ', '\t')) and after_exception:
                 # Diff context line (after exception)
                 result.append(stripped + '\n', style="dim")
+            elif after_exception and has_diff and not verbose:
+                # Prose between exception and diff — suppress
+                pass
             else:
                 result.append(lines[i])
             i += 1
@@ -177,9 +189,10 @@ def _test_header(test_id, label, width):
 
 
 class RichTestResult(unittest.TestResult):
-    def __init__(self, console, buffer: bool, verbosity):
+    def __init__(self, console, buffer: bool, verbose=False):
         super().__init__()
         self.console = console
+        self.verbose = verbose
         self._original_handler_streams = {}
 
     def _setupStdout(self):
@@ -226,23 +239,24 @@ class RichTestResult(unittest.TestResult):
         for test, err in self.errors:
             self.console.print(_test_header(test.id(), "ERROR", width))
             cleaned = _clean_traceback(err)
-            self.console.print(_colorize_diff(cleaned))
+            self.console.print(_colorize_diff(cleaned, verbose=self.verbose))
         for test, err in self.failures:
             self.console.print(_test_header(test.id(), "FAIL", width))
             cleaned = _clean_traceback(err)
-            self.console.print(_colorize_diff(cleaned))
+            self.console.print(_colorize_diff(cleaned, verbose=self.verbose))
 
 
 class RichTestRunner:
-    def __init__(self, failfast=False, buffer=False, skipped_modules=None):
+    def __init__(self, failfast=False, buffer=False, skipped_modules=None, verbose=False):
         self.failfast = failfast
         self.buffer = buffer
+        self.verbose = verbose
         self.skipped_modules = skipped_modules or {}
         # Use sys.__stdout__ to bypass capture - test progress should always be visible
         self.console = Console(file=sys.__stdout__)
 
     def run(self, suite):
-        result = RichTestResult(self.console, self.buffer, 0)
+        result = RichTestResult(self.console, self.buffer, verbose=self.verbose)
         result.failfast = self.failfast
         result.buffer = self.buffer
 

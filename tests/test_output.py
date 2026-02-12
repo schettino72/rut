@@ -92,11 +92,12 @@ class TestColorizeDiff(unittest.TestCase):
         self.assertIn('AssertionError', result.plain)
         self.assertTrue(any('bold yellow' in str(s.style) for s in result._spans))
 
-    def test_code_line_dim(self):
+    def test_code_line_unstyled(self):
         tb = '    self.assertEqual(a, b)\n'
         result = _colorize_diff(tb)
         self.assertIn('self.assertEqual(a, b)', result.plain)
-        self.assertTrue(any('dim' in str(s.style) for s in result._spans))
+        # Code lines are unstyled to differentiate from dim File line parts
+        self.assertEqual(len(result._spans), 0)
 
     def test_diff_context_dim(self):
         tb = 'ValueError: bad\n  unchanged line\n'
@@ -115,6 +116,42 @@ class TestColorizeDiff(unittest.TestCase):
         self.assertTrue(any('bold cyan' in s for s in styles))
         self.assertTrue(any('yellow' in s for s in styles))
         self.assertTrue(any(s == 'cyan' for s in styles))
+
+    def test_prose_suppressed_when_diff_present(self):
+        tb = (
+            'AssertionError: Lists differ: [1, 2, 3] != [1, 2, 3, 4, 5]\n'
+            'Second list contains 2 additional elements.\n'
+            'First extra element 3:\n'
+            '4\n'
+            '- [1, 2, 3]\n'
+            '+ [1, 2, 3, 4, 5]\n'
+        )
+        result = _colorize_diff(tb)
+        self.assertNotIn('Second list contains', result.plain)
+        self.assertNotIn('First extra element', result.plain)
+        self.assertIn('- [1, 2, 3]', result.plain)
+        self.assertIn('+ [1, 2, 3, 4, 5]', result.plain)
+
+    def test_prose_kept_when_no_diff(self):
+        tb = 'ValueError: something went wrong\nDetails here\n'
+        result = _colorize_diff(tb)
+        self.assertIn('Details here', result.plain)
+
+    def test_prose_kept_when_verbose(self):
+        tb = (
+            'AssertionError: Lists differ: [1, 2, 3] != [1, 2, 3, 4, 5]\n'
+            'Second list contains 2 additional elements.\n'
+            '- [1, 2, 3]\n'
+            '+ [1, 2, 3, 4, 5]\n'
+        )
+        result = _colorize_diff(tb, verbose=True)
+        self.assertIn('Second list contains', result.plain)
+
+    def test_traceback_header_kept_when_verbose(self):
+        tb = 'Traceback (most recent call last):\n'
+        result = _colorize_diff(tb, verbose=True)
+        self.assertIn('Traceback', result.plain)
+        self.assertTrue(any('dim' in str(s.style) for s in result._spans))
 
 
 class TestTestHeader(unittest.TestCase):

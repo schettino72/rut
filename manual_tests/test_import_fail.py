@@ -5,7 +5,7 @@ Run from project root:
 
 Expected: clean error message about missing module, not raw unittest traceback.
 """
-import nonexistent_module_xyz
+import nonexistent_module_xyz  # noqa: F401
 import unittest
 
 
