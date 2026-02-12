@@ -1,6 +1,6 @@
 [project]
 name = "rut"
-version = "0.3.0"
+version = "0.4.0.dev0"
 description = "A test runner for python unittest with async support."
 authors = [{ name = "Eduardo Naufel Schettino", email = "schettino72@gmail.com" }]
 dependencies = [
@@ -41,7 +41,7 @@ dev = [
 ]
 
 [tool.rut]
-source_dirs = ["src", "tests", "manual_tests"]
+source_dirs = ["src", "tests"]
 
 [tool.uv]
 package = true
