@@ -78,15 +78,19 @@ rut -k "feature"
 
 | Argument | Description | Default |
 |---|---|---|
-| `path` | The path to the tests to be discovered. | `tests` |
+| `path` | Path to test file or directory to run. Does not affect project config. | discover all in test_dir |
 
 ## Configuration
 
 `rut` can be configured via the `[tool.rut]` section in your `pyproject.toml` file.
 
+`rut` looks for `pyproject.toml` in the current directory. If cwd is `tests/`, it also checks the parent directory and changes to it if found.
+
+Without `pyproject.toml`, rut runs in ad-hoc mode with `test_dir=.` and `source_dirs=["."]`.
+
 ### `source_dirs`
 
-Specifies the source directories for coverage reporting, incremental testing (`--changed`), and import dependency analysis. If not configured, the default is `["src", "tests"]`.
+Specifies the source directories for coverage reporting, incremental testing (`--changed`), and import dependency analysis. If not configured, the default is `["src", "tests"]`. Validated only when `--cov` or `--changed` is used.
 
 ```toml
 [tool.rut]
@@ -106,7 +110,7 @@ warning_filters = [
 
 ### `test_base_dir`
 
-To specify the base directory for `conftest.py` discovery, use the `test_base_dir` key.
+The base directory for test discovery and `conftest.py` lookup. Default: `"tests"`.
 
 ```toml
 [tool.rut]

@@ -59,12 +59,12 @@ class TestWarningCollector(unittest.TestCase):
 
 class TestRunner(unittest.TestCase):
     def test_discover_all_samples(self):
-        runner = RutRunner('tests/samples/discovery', 'tests', None, False, False, [])
+        runner = RutRunner('tests/samples/discovery', None, False, False, [])
         suite = runner.load_tests(pattern="sample*.py")
         self.assertEqual(suite.countTestCases(), 4)
 
     def test_filter_by_keyword(self):
-        runner = RutRunner('tests/samples/discovery', 'tests', 'feature', False, False, [])
+        runner = RutRunner('tests/samples/discovery', 'feature', False, False, [])
         suite = runner.load_tests(pattern="sample*.py")
         self.assertEqual(suite.countTestCases(), 2)
 
@@ -73,7 +73,7 @@ class TestRunner(unittest.TestCase):
         self.assertIn("test_delta_feature", test_ids)
 
     def test_filter_by_filename(self):
-        runner = RutRunner('tests/samples/discovery', 'tests', 'sample_one', False, False, [])
+        runner = RutRunner('tests/samples/discovery', 'sample_one', False, False, [])
         suite = runner.load_tests(pattern="sample*.py")
         self.assertEqual(suite.countTestCases(), 2)
 
@@ -81,7 +81,7 @@ class TestRunner(unittest.TestCase):
         self.assertIn("SampleOneTests", test_ids)
 
     def test_load_valid_async_test(self):
-        runner = RutRunner('tests/samples', 'tests', 'a_valid_async_test', False, False, [])
+        runner = RutRunner('tests/samples', 'a_valid_async_test', False, False, [])
         suite = runner.load_tests(pattern="sample*.py")
         self.assertEqual(suite.countTestCases(), 1)
 
@@ -89,14 +89,14 @@ class TestRunner(unittest.TestCase):
         self.assertIn("test_a_valid_async_test", test_ids)
 
     def test_fail_on_invalid_async_test(self):
-        runner = RutRunner('tests/samples', 'tests', 'invalid_async', False, False, [])
+        runner = RutRunner('tests/samples', 'invalid_async', False, False, [])
         with self.assertRaises(InvalidAsyncTestError) as cm:
             runner.load_tests(pattern="sample*.py")
 
         self.assertIn("is a coroutine but class is not a `unittest.IsolatedAsyncioTestCase`", str(cm.exception))
 
     def test_filter_by_keyword_nested(self):
-        runner = RutRunner('tests', 'tests', 'nested_feature', False, False, [])
+        runner = RutRunner('tests', 'nested_feature', False, False, [])
         
         # Create a nested suite manually
         suite = unittest.TestSuite()
@@ -138,8 +138,7 @@ class TestRunnerHooks(unittest.TestCase):
         Tests that rut_session_setup and rut_session_teardown are called.
         """
         runner = RutRunner(
-            test_path='tests/samples',
-            test_base_dir='tests/samples',
+            test_dir='tests/samples',
             keyword='HookCheckTest', # Only run our hook check test
             failfast=False,
             capture=False,
@@ -209,7 +208,7 @@ class TestTopologicalSorting(unittest.TestCase):
 
     def test_alpha_flag_uses_alphabetical_order(self):
         """Test that --alpha flag produces alphabetical order."""
-        runner = RutRunner('tests/samples/topo', 'tests', None, False, False, [], alpha=True)
+        runner = RutRunner('tests/samples/topo', None, False, False, [], alpha=True)
         suite = runner.load_tests(pattern="test*.py")
 
         modules = [test.__module__ for test in suite]
@@ -221,7 +220,7 @@ class TestTopologicalSorting(unittest.TestCase):
 
     def test_default_uses_topological_order(self):
         """Test that default (no --alpha) produces topological order."""
-        runner = RutRunner('tests/samples/topo', 'tests', None, False, False, [], alpha=False)
+        runner = RutRunner('tests/samples/topo', None, False, False, [], alpha=False)
         suite = runner.load_tests(pattern="test*.py")
 
         modules = [test.__module__ for test in suite]

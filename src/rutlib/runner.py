@@ -95,9 +95,9 @@ class WarningCollector:
 
 
 class RutRunner:
-    def __init__(self, test_path, test_base_dir, keyword, failfast, capture, warning_filters, alpha=False, source_dirs=None, verbose=False, changed=False):
+    def __init__(self, test_dir, keyword, failfast, capture, warning_filters, alpha=False, source_dirs=None, verbose=False, changed=False, test_path=None):
+        self.test_dir = test_dir
         self.test_path = test_path
-        self.test_base_dir = test_base_dir
         self.keyword = keyword
         self.failfast = failfast
         self.capture = capture
@@ -111,7 +111,7 @@ class RutRunner:
         self.conftest = self._load_conftest()
 
     def _load_conftest(self):
-        conftest_path = os.path.join(self.test_base_dir, "conftest.py")
+        conftest_path = os.path.join(self.test_dir, "conftest.py")
         if not os.path.exists(conftest_path):
             return None
         spec = importlib.util.spec_from_file_location("conftest", conftest_path)
@@ -140,7 +140,7 @@ class RutRunner:
         """
         # TODO:         """report on failures importing modules due to syntax error"""
         # import fnmatch
-        # for root, _, files in os.walk(self.test_path):
+        # for root, _, files in os.walk(self.test_dir):
         #     for f in files:
         #         if f.endswith(".py") and fnmatch.fnmatch(f, pattern):
         #             module_path = os.path.join(root, f)
@@ -149,7 +149,14 @@ class RutRunner:
         #             spec.loader.exec_module(module)
 
         loader = unittest.TestLoader()
-        suite = loader.discover(self.test_path, pattern=pattern)
+        discover_dir = self.test_dir
+        if self.test_path:
+            if os.path.isfile(self.test_path):
+                discover_dir, pattern = os.path.split(self.test_path)
+                discover_dir = discover_dir or "."
+            elif os.path.isdir(self.test_path):
+                discover_dir = self.test_path
+        suite = loader.discover(discover_dir, pattern=pattern)
         suite = self.sort_tests(suite)
         if self.keyword:
             suite = self._filter_keyword(suite, self.keyword)

@@ -3,21 +3,17 @@ import builtins
 import importlib.metadata
 import logging
 import os
+import pathlib
 import sys
 import time
 import tomllib
 import unittest
-import warnings
 from rich.console import Console
 from rich.panel import Panel
 
 
 class RutCLI:
-    def __init__(self):
-        self.args = self.parse_args()
-        self.config = self.load_config()
-
-    def parse_args(self):
+    def parse_args(self, argv=None):
         parser = argparse.ArgumentParser(description="RUT")
         parser.add_argument('-V', '--version', action='version',
                             version=f"rut {importlib.metadata.version('rut')}")
@@ -26,10 +22,12 @@ class RutCLI:
         parser.add_argument('-s', '--capture', action='store_true', help='Disable all capturing')
         parser.add_argument('--cov', action='store_true', help='Code Coverage')
         parser.add_argument(
-            '--test-base-dir', type=str, default=None, help='Base directory for tests.'
+            '--test-base-dir', type=str, default=None,
+            help='Base directory for tests (default: "tests", configurable in pyproject.toml).'
         )
         parser.add_argument(
-            'test_path', nargs='?', type=str, default=None, help='Path to tests.'
+            'test_path', nargs='?', type=str, default=None,
+            help='Path to test directory or file. Overrides --test-base-dir and config.'
         )
         parser.add_argument('--no-color', action='store_true', help='Disable color output.')
         parser.add_argument('-a', '--alpha', action='store_true',
@@ -40,51 +38,61 @@ class RutCLI:
                             help='Show verbose output including import dependency ranking')
         parser.add_argument('-c', '--changed', action='store_true',
                             help='Run tests only from files changed since last successful run')
-        return parser.parse_args()
+        self.args = parser.parse_args(argv)
 
-    @property
-    def test_base_dir(self):
-        if self.args.test_base_dir:
-            return self.args.test_base_dir
-        return self.config.get("test_base_dir", "tests")
+    def setup(self):
+        self.config = self.load_config()
+        self.test_dir = self._resolve_test_dir()
+        self.source_dirs = self._resolve_source_dirs()
 
     def load_config(self):
-        try:
-            with open("pyproject.toml", "rb") as f:
-                pyproject_data = tomllib.load(f)
-                return pyproject_data.get("tool", {}).get("rut", {})
-        except FileNotFoundError:
-            return {}
+        stderr = Console(stderr=True)
+        cwd = pathlib.Path.cwd()
+        # Look in cwd, then parent if cwd is "tests/"
+        candidates = [cwd]
+        if cwd.name == "tests":
+            candidates.append(cwd.parent)
+        for directory in candidates:
+            pyproject = directory / "pyproject.toml"
+            if pyproject.is_file():
+                self.project_root = directory
+                if directory != cwd:
+                    os.chdir(directory)
+                with open(pyproject, "rb") as f:
+                    pyproject_data = tomllib.load(f)
+                    config = pyproject_data.get("tool", {}).get("rut", {})
+                    if not config:
+                        stderr.print("[yellow]Warning: no \\[tool.rut] section in pyproject.toml. Defaults: test_dir=tests  source_dirs=src, tests[/yellow]")
+                    return config
+        self.project_root = cwd
+        stderr.print("[yellow]Warning: no pyproject.toml found. Defaults: test_dir=.  source_dirs=.[/yellow]")
+        return {}
 
-    @property
-    def source_dirs(self):
-        # Check for new config name first
-        if "source_dirs" in self.config:
-            dirs = self.config["source_dirs"]
-        elif "coverage_source" in self.config:
-            # Deprecated alias
-            warnings.warn(
-                "'coverage_source' is deprecated, use 'source_dirs' instead.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            dirs = self.config["coverage_source"]
+    def _resolve_test_dir(self):
+        if self.args.test_base_dir:
+            base = self.args.test_base_dir
         else:
-            dirs = ["src", "tests"]
+            default = "tests" if self.config else "."
+            base = str(self.project_root / self.config.get("test_base_dir", default))
+        if not os.path.isdir(base):
+            print(f"Error: test directory '{base}' does not exist.", file=sys.stderr)
+            sys.exit(1)
+        return base
 
-        # Check for non-existent source directories
-        for source_dir in dirs:
-            if not os.path.isdir(source_dir):
-                print(
-                    f"Warning: source directory '{source_dir}' does not exist.",
-                    file=sys.stderr,
-                )
+    def _resolve_source_dirs(self):
+        if "source_dirs" in self.config:
+            dirs = [str(self.project_root / d) for d in self.config["source_dirs"]]
+        elif self.config:
+            dirs = [str(self.project_root / d) for d in ["src", "tests"]]
+        else:
+            dirs = ["."]
+
+        invalid = [d for d in dirs if not os.path.isdir(d)]
+        if invalid and (self.args.cov or self.args.changed):
+            print(f"Error: source directories do not exist: {', '.join(invalid)}",
+                  file=sys.stderr)
+            sys.exit(1)
         return dirs
-
-    @property
-    def coverage_source(self):
-        """Deprecated alias for source_dirs."""
-        return self.source_dirs
 
     def warning_filters(self, filters_spec):
         """

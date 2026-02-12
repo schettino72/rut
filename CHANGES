@@ -2,6 +2,18 @@
 Changes
 =======
 
+0.4.0 (unreleased)
+====================
+
+- Removed deprecated `coverage_source` config option (use `source_dirs` instead).
+- Positional argument is now a test selector only — does not affect `test_dir` or `source_dirs`.
+- Ad-hoc mode: without `pyproject.toml`, defaults to `test_dir=.` and `source_dirs=["."]`.
+- When cwd is `tests/`, automatically finds `pyproject.toml` in parent directory.
+- `source_dirs` validation is now lazy — errors only with `--cov` or `--changed`.
+- Smart `sys.path` setup: walks up from cwd through `__init__.py` to find package root.
+- Display resolved `test_dir` and `source_dirs` on startup.
+
+
 0.3.0 (2026-02-03)
 ====================
 
