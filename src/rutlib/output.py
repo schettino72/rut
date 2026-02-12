@@ -1,10 +1,13 @@
 import logging
+import re
 import sys
 import time
 import unittest
 from rich.console import Console
-from rich.panel import Panel
 from rich.text import Text
+
+_file_re = re.compile(r'^(\s*File ")(.+)(",\s*line\s*)(\d+)(?:(,\s*in\s*)(.+))?$')
+_exc_re = re.compile(r'^(\w+(?:Error|Exception))\b(.*)')
 
 
 def _clean_traceback(tb_string):
@@ -33,6 +36,29 @@ def _clean_traceback(tb_string):
     return ''.join(cleaned)
 
 
+def _append_file_line(result, match):
+    """Append a parsed File line with per-component styles."""
+    prefix, path, mid, lineno, in_part, func = match.groups()
+    # Split path into directory + filename
+    sep = path.rfind('/')
+    if sep >= 0:
+        directory = path[:sep + 1]
+        filename = path[sep + 1:]
+    else:
+        directory = ''
+        filename = path
+    result.append(prefix, style="dim")
+    if directory:
+        result.append(directory, style="dim")
+    result.append(filename, style="bold cyan")
+    result.append(mid, style="dim")
+    result.append(lineno, style="yellow")
+    if in_part and func:
+        result.append(in_part, style="dim")
+        result.append(func, style="cyan")
+    result.append('\n')
+
+
 def _colorize_diff(tb_string):
     """Return a rich.text.Text with colorized diff lines.
 
@@ -43,6 +69,7 @@ def _colorize_diff(tb_string):
     """
     result = Text()
     lines = tb_string.splitlines(keepends=True)
+    after_exception = False
     i = 0
     while i < len(lines):
         stripped = lines[i].rstrip('\n')
@@ -71,14 +98,26 @@ def _colorize_diff(tb_string):
         elif stripped.startswith('? '):
             # Orphan ? line (no preceding +/- consumed it), skip
             i += 1
-        elif stripped.startswith('File '):
-            result.append(stripped + '\n', style="cyan")
-            i += 1
         elif stripped.startswith('Traceback '):
-            result.append(stripped + '\n', style="dim")
+            # Drop the ceremony header entirely
             i += 1
         else:
-            result.append(lines[i])
+            file_m = _file_re.match(stripped)
+            exc_m = _exc_re.match(stripped)
+            if file_m:
+                _append_file_line(result, file_m)
+            elif exc_m and not after_exception:
+                result.append(exc_m.group(1), style="bold yellow")
+                result.append(exc_m.group(2) + '\n')
+                after_exception = True
+            elif stripped.startswith((' ', '\t')) and not after_exception:
+                # Indented code line (before exception)
+                result.append(stripped + '\n', style="dim")
+            elif stripped.startswith((' ', '\t')) and after_exception:
+                # Diff context line (after exception)
+                result.append(stripped + '\n', style="dim")
+            else:
+                result.append(lines[i])
             i += 1
     return result
 
@@ -96,6 +135,45 @@ def _append_highlighted(result, content_line, pointer_line, base_style, highligh
         else:
             result.append(ch, style=base_style)
     result.append('\n', style=base_style)
+
+
+def _test_header(test_id, label, width):
+    """Build a rule-style header line.
+
+    ── test_module ──────── TestClass.test_method ──────── FAIL ──
+    """
+    dash = "─"
+    style = "red" if label == "FAIL" else "yellow"
+
+    # Split test_id into module name and Class.method
+    parts = test_id.split('.')
+    module = ""
+    class_method = test_id
+    for i, part in enumerate(parts):
+        if part and part[0].isupper():
+            module = parts[i - 1] if i > 0 else ""
+            class_method = '.'.join(parts[i:])
+            break
+
+    left = f" {module} " if module else " "
+    center = f" {class_method} "
+    right = f" {label} "
+
+    content_len = 2 + len(left) + len(center) + len(right) + 2
+    remaining = max(width - content_len, 6)
+    d1 = remaining // 4
+    d2 = remaining - d1 - 2  # push FAIL toward right end
+    d3 = 2
+
+    result = Text()
+    result.append(dash * 2, style=f"dim {style}")
+    result.append(left, style=f"dim {style}")
+    result.append(dash * d1, style=f"dim {style}")
+    result.append(center, style=f"bold {style}")
+    result.append(dash * d2, style=f"dim {style}")
+    result.append(right, style=f"bold {style}")
+    result.append(dash * d3, style=f"dim {style}")
+    return result
 
 
 class RichTestResult(unittest.TestResult):
@@ -141,18 +219,18 @@ class RichTestResult(unittest.TestResult):
         self.console.print(f"[yellow]SKIP[/yellow] {test.id()}: {reason}")
 
     def printErrors(self):
-        if self.errors or self.failures:
-            self.console.print("\n[bold red]Failures and Errors:[/bold red]")
-            if self.errors:
-                for test, err in self.errors:
-                    cleaned = _clean_traceback(err)
-                    colorized = _colorize_diff(cleaned)
-                    self.console.print(Panel(colorized, title=f"[bold red]ERROR: {test.id()}[/bold red]"))
-            if self.failures:
-                for test, err in self.failures:
-                    cleaned = _clean_traceback(err)
-                    colorized = _colorize_diff(cleaned)
-                    self.console.print(Panel(colorized, title=f"[bold red]FAIL: {test.id()}[/bold red]"))
+        if not self.errors and not self.failures:
+            return
+        width = self.console.width or 80
+        self.console.print()
+        for test, err in self.errors:
+            self.console.print(_test_header(test.id(), "ERROR", width))
+            cleaned = _clean_traceback(err)
+            self.console.print(_colorize_diff(cleaned))
+        for test, err in self.failures:
+            self.console.print(_test_header(test.id(), "FAIL", width))
+            cleaned = _clean_traceback(err)
+            self.console.print(_colorize_diff(cleaned))
 
 
 class RichTestRunner:

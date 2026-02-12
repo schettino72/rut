@@ -1,6 +1,6 @@
 import unittest
 from rich.text import Text
-from rutlib.output import _clean_traceback, _colorize_diff
+from rutlib.output import _clean_traceback, _colorize_diff, _test_header
 
 
 class TestCleanTraceback(unittest.TestCase):
@@ -76,11 +76,66 @@ class TestColorizeDiff(unittest.TestCase):
         self.assertTrue(len(result._spans) > 2)
 
     def test_file_line_cyan(self):
-        tb = 'File "test.py", line 1, in test_foo\n'
+        tb = 'File "/home/user/tests/test.py", line 1, in test_foo\n'
         result = _colorize_diff(tb)
-        self.assertTrue(any('cyan' in str(s.style) for s in result._spans))
+        # Filename gets bold cyan, other parts get dim/yellow/cyan
+        self.assertTrue(any('bold cyan' in str(s.style) for s in result._spans))
 
-    def test_traceback_header_dim(self):
+    def test_traceback_header_dropped(self):
         tb = 'Traceback (most recent call last):\n'
         result = _colorize_diff(tb)
+        self.assertEqual(result.plain, '')
+
+    def test_exception_line_bold_yellow(self):
+        tb = 'AssertionError: 42 != 43\n'
+        result = _colorize_diff(tb)
+        self.assertIn('AssertionError', result.plain)
+        self.assertTrue(any('bold yellow' in str(s.style) for s in result._spans))
+
+    def test_code_line_dim(self):
+        tb = '    self.assertEqual(a, b)\n'
+        result = _colorize_diff(tb)
+        self.assertIn('self.assertEqual(a, b)', result.plain)
         self.assertTrue(any('dim' in str(s.style) for s in result._spans))
+
+    def test_diff_context_dim(self):
+        tb = 'ValueError: bad\n  unchanged line\n'
+        result = _colorize_diff(tb)
+        self.assertIn('unchanged line', result.plain)
+        self.assertTrue(any('dim' in str(s.style) for s in result._spans))
+
+    def test_file_line_parts_styled(self):
+        tb = '  File "/home/user/tests/test_foo.py", line 19, in test_bar\n'
+        result = _colorize_diff(tb)
+        plain = result.plain
+        self.assertIn('test_foo.py', plain)
+        self.assertIn('19', plain)
+        self.assertIn('test_bar', plain)
+        styles = [str(s.style) for s in result._spans]
+        self.assertTrue(any('bold cyan' in s for s in styles))
+        self.assertTrue(any('yellow' in s for s in styles))
+        self.assertTrue(any(s == 'cyan' for s in styles))
+
+
+class TestTestHeader(unittest.TestCase):
+    def test_contains_module_and_class_method(self):
+        result = _test_header('test_math.TestCalc.test_add', 'FAIL', 80)
+        plain = result.plain
+        self.assertIn('test_math', plain)
+        self.assertIn('TestCalc.test_add', plain)
+        self.assertIn('FAIL', plain)
+
+    def test_contains_error_label(self):
+        result = _test_header('test_io.TestFile.test_read', 'ERROR', 80)
+        plain = result.plain
+        self.assertIn('ERROR', plain)
+
+    def test_uses_dashes(self):
+        result = _test_header('test_foo.TestBar.test_baz', 'FAIL', 80)
+        self.assertIn('─', result.plain)
+
+    def test_handles_deep_module_path(self):
+        result = _test_header('pkg.sub.test_foo.TestBar.test_baz', 'FAIL', 80)
+        plain = result.plain
+        self.assertIn('test_foo', plain)
+        self.assertIn('TestBar.test_baz', plain)
