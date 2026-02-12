@@ -5,7 +5,7 @@ import unittest
 import warnings
 from unittest.mock import patch
 from rutlib.runner import RutRunner, InvalidAsyncTestError, WarningCollector
-from rutlib.cli import RichTestRunner
+from rutlib.output import RichTestRunner
 
 class TestWarningCollector(unittest.TestCase):
     def setUp(self):

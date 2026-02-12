@@ -4,7 +4,8 @@ import shutil
 import coverage
 from rich import print
 from .cache import update_cache
-from .cli import RutCLI, RichTestRunner
+from .cli import RutCLI
+from .output import RichTestRunner
 from .runner import RutRunner
 
 

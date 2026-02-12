@@ -1,18 +1,14 @@
 import argparse
 import builtins
 import importlib.metadata
-import logging
 import os
 import pathlib
 import sys
-import time
 try:
     import tomllib
 except ModuleNotFoundError:
     import tomli as tomllib
-import unittest
 from rich.console import Console
-from rich.panel import Panel
 
 
 class RutCLI:
@@ -123,91 +119,3 @@ class RutCLI:
                     print(f"Warning: Could not find warning category '{category_name}'. Defaulting to 'Warning'.", file=sys.stderr)
             filters.append(filter_dict)
         return filters
-
-
-class RichTestResult(unittest.TestResult):
-    def __init__(self, console, buffer: bool, verbosity):
-        super().__init__()
-        self.console = console
-        self._original_handler_streams = {}
-
-    def _setupStdout(self):
-        super()._setupStdout()
-        if self.buffer:
-            for handler in logging.root.handlers:
-                if hasattr(handler, 'stream'):
-                    if handler.stream is self._original_stdout:
-                        self._original_handler_streams[id(handler)] = handler.stream
-                        handler.stream = self._stdout_buffer
-                    elif handler.stream is self._original_stderr:
-                        self._original_handler_streams[id(handler)] = handler.stream
-                        handler.stream = self._stderr_buffer
-
-    def _restoreStdout(self):
-        if self.buffer:
-            for handler in logging.root.handlers:
-                if id(handler) in self._original_handler_streams:
-                    handler.stream = self._original_handler_streams[id(handler)]
-            self._original_handler_streams.clear()
-        super()._restoreStdout()
-
-    def addSuccess(self, test):
-        super().addSuccess(test)
-        self.console.print(f"[green]✔[/green] {test.id()}")
-
-    def addFailure(self, test, err):
-        super().addFailure(test, err)
-        self.console.print(f"[bold red]✖[/bold red] {test.id()}")
-
-    def addError(self, test, err):
-        super().addError(test, err)
-        self.console.print(f"[bold red]✖[/bold red] {test.id()}")
-
-    def addSkip(self, test, reason):
-        super().addSkip(test, reason)
-        self.console.print(f"[yellow]SKIP[/yellow] {test.id()}: {reason}")
-
-    def printErrors(self):
-        if self.errors or self.failures:
-            self.console.print("\n[bold red]Failures and Errors:[/bold red]")
-            if self.errors:
-                for test, err in self.errors:
-                    self.console.print(Panel(err, title=f"[bold red]ERROR: {test.id()}[/bold red]"))
-            if self.failures:
-                for test, err in self.failures:
-                    self.console.print(Panel(err, title=f"[bold red]FAIL: {test.id()}[/bold red]"))
-
-
-class RichTestRunner:
-    def __init__(self, failfast=False, buffer=False, skipped_modules=None):
-        self.failfast = failfast
-        self.buffer = buffer
-        self.skipped_modules = skipped_modules or {}
-        # Use sys.__stdout__ to bypass capture - test progress should always be visible
-        self.console = Console(file=sys.__stdout__)
-
-    def run(self, suite):
-        result = RichTestResult(self.console, self.buffer, 0)
-        result.failfast = self.failfast
-        result.buffer = self.buffer
-
-        # Print skipped (up-to-date) modules first
-        for module, count in self.skipped_modules.items():
-            self.console.print(f"[yellow]⚡[/yellow] {module} ({count})")
-
-        start_time = time.time()
-        suite.run(result)
-        stop_time = time.time()
-
-        time_taken = stop_time - start_time
-        result.printErrors()
-
-        self.console.print("\n" + ("-" * 70))
-        self.console.print(f"Ran {result.testsRun} tests in {time_taken:.3f}s")
-
-        if result.wasSuccessful():
-            self.console.print("\n[bold green]OK[/bold green]")
-        else:
-            self.console.print(f"\n[bold red]FAILED[/bold red] (failures={len(result.failures)}, errors={len(result.errors)})")
-
-        return result
