@@ -57,6 +57,30 @@ class TestWarningCollector(unittest.TestCase):
                 my_specific_module.do_warning()
 
 
+class TestImportErrors(unittest.TestCase):
+    def test_check_import_errors_exits_on_failed_import(self):
+        """_check_import_errors should print clean error and exit."""
+        import tempfile
+        d = tempfile.mkdtemp()
+        with open(os.path.join(d, 'test_broken.py'), 'w') as f:
+            f.write('import nonexistent_module_xyz_42\n')
+
+        loader = unittest.TestLoader()
+        suite = loader.discover(d, pattern='test*.py')
+
+        with self.assertRaises(SystemExit) as cm:
+            RutRunner._check_import_errors(suite)
+        self.assertEqual(cm.exception.code, 1)
+
+    def test_check_import_errors_noop_on_valid_suite(self):
+        """_check_import_errors should do nothing for a valid suite."""
+        runner = RutRunner('tests/samples/discovery', None, False, False, [])
+        loader = unittest.TestLoader()
+        suite = loader.discover('tests/samples/discovery', pattern='sample*.py')
+        # Should not raise
+        RutRunner._check_import_errors(suite)
+
+
 class TestRunner(unittest.TestCase):
     def test_discover_all_samples(self):
         runner = RutRunner('tests/samples/discovery', None, False, False, [])

@@ -8,6 +8,7 @@ import importlib.util
 import inspect
 import os
 import pathlib
+import sys
 import unittest
 import warnings
 
@@ -130,6 +131,41 @@ class RutRunner:
         else:
             hook()
 
+    @staticmethod
+    def _check_import_errors(suite):
+        """Check for failed imports after discovery.
+
+        unittest.TestLoader.discover() silently wraps import errors as
+        _FailedTest objects. Walk the suite, extract the root cause, and
+        print a clean error message instead of letting the raw traceback
+        appear later during test execution.
+        """
+        errors = []
+        for test in suite:
+            if isinstance(test, unittest.TestSuite):
+                for t in test:
+                    if type(t).__name__ == "_FailedTest":
+                        exc = getattr(t, "_exception", None)
+                        if exc:
+                            # Last line of the traceback is the root cause
+                            root_cause = str(exc).strip().rsplit("\n", 1)[-1]
+                        else:
+                            root_cause = "unknown error"
+                        # test method name matches the module that failed
+                        errors.append((t._testMethodName, root_cause))
+            elif type(test).__name__ == "_FailedTest":
+                exc = getattr(test, "_exception", None)
+                if exc:
+                    root_cause = str(exc).strip().rsplit("\n", 1)[-1]
+                else:
+                    root_cause = "unknown error"
+                errors.append((test._testMethodName, root_cause))
+
+        if errors:
+            for module_name, cause in errors:
+                print(f"[bold red]Error:[/bold red] Failed to import '{module_name}': {cause}", file=sys.stderr)
+            sys.exit(1)
+
     def load_tests(self, pattern="test*.py"):
         """return unittest.suite.TestSuite
 
@@ -138,16 +174,6 @@ class RutRunner:
         2) suite per class
         3) actual tests
         """
-        # TODO:         """report on failures importing modules due to syntax error"""
-        # import fnmatch
-        # for root, _, files in os.walk(self.test_dir):
-        #     for f in files:
-        #         if f.endswith(".py") and fnmatch.fnmatch(f, pattern):
-        #             module_path = os.path.join(root, f)
-        #             spec = importlib.util.spec_from_file_location(f[:-3], module_path)
-        #             module = importlib.util.module_from_spec(spec)
-        #             spec.loader.exec_module(module)
-
         loader = unittest.TestLoader()
         discover_dir = self.test_dir
         if self.test_path:
@@ -157,6 +183,7 @@ class RutRunner:
             elif os.path.isdir(self.test_path):
                 discover_dir = self.test_path
         suite = loader.discover(discover_dir, pattern=pattern)
+        self._check_import_errors(suite)
         suite = self.sort_tests(suite)
         if self.keyword:
             suite = self._filter_keyword(suite, self.keyword)
