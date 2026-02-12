@@ -12,6 +12,7 @@ Changes
 - `source_dirs` validation is now lazy — errors only with `--cov` or `--changed`.
 - Smart `sys.path` setup: walks up from cwd through `__init__.py` to find package root.
 - Display resolved `test_dir` and `source_dirs` on startup.
+- Support Python 3.10, 3.11, 3.12, 3.13, and 3.14.
 
 
 0.3.0 (2026-02-03)

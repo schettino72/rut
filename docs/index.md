@@ -11,7 +11,7 @@ title: rut - Run Unit Tests
   <div class="hero-content">
     <div class="badges">
       <a href="https://pypi.org/project/rut/">
-        <img src="https://img.shields.io/badge/python-3.12+-3776ab?logo=python&logoColor=white" alt="Python 3.12+">
+        <img src="https://img.shields.io/badge/python-3.10+-3776ab?logo=python&logoColor=white" alt="Python 3.10+">
       </a>
       <a href="https://github.com/schettino72/rut">
         <img src="https://img.shields.io/github/stars/schettino72/rut?style=social" alt="GitHub stars">

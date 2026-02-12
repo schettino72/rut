@@ -6,7 +6,10 @@ import os
 import pathlib
 import sys
 import time
-import tomllib
+try:
+    import tomllib
+except ModuleNotFoundError:
+    import tomli as tomllib
 import unittest
 from rich.console import Console
 from rich.panel import Panel
