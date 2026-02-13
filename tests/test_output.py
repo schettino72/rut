@@ -198,23 +198,26 @@ class TestDotMode(unittest.TestCase):
         return result, console
 
     def test_dot_on_success(self):
-        result, _ = self._make_result(verbose=False)
+        result, console = self._make_result(verbose=False)
         test = self._Pass('test_pass')
         result.addSuccess(test)
-        self.assertEqual(result._dot_line.plain, '.')
+        output = console.file.getvalue()
+        self.assertIn('.', output)
         self.assertEqual(result._dot_count, 1)
 
     def test_dot_F_on_failure(self):
-        result, _ = self._make_result(verbose=False)
+        result, console = self._make_result(verbose=False)
         test = self._Fail('test_fail')
         result.addFailure(test, (None, None, None))
-        self.assertEqual(result._dot_line.plain, 'F')
+        output = console.file.getvalue()
+        self.assertIn('F', output)
 
     def test_dot_E_on_error(self):
-        result, _ = self._make_result(verbose=False)
+        result, console = self._make_result(verbose=False)
         test = self._Pass('test_pass')
         result.addError(test, (None, None, None))
-        self.assertEqual(result._dot_line.plain, 'E')
+        output = console.file.getvalue()
+        self.assertIn('E', output)
 
     def test_verbose_prints_full_line(self):
         result, console = self._make_result(verbose=True)
@@ -289,3 +292,102 @@ class TestFdCapturedOutput(unittest.TestCase):
         self.assertEqual(len(result.failures), 1)
         self.assertNotIn('FROM_PASSING_TEST', output)
         self.assertIn('FROM_FAILING_TEST', output)
+
+
+class TestSkippedModulesDisplay(unittest.TestCase):
+    """Tests for up-to-date (skipped) modules display in dot vs verbose mode."""
+
+    def _run_with_skipped(self, skipped_modules, verbose=False):
+        buf = StringIO()
+        runner = RichTestRunner(buffer=True, skipped_modules=skipped_modules, verbose=verbose)
+        runner.console.file.close()
+        runner.console = Console(file=buf, width=80)
+        suite = unittest.TestSuite()
+        runner.run(suite)
+        return buf.getvalue()
+
+    def test_dot_mode_single_summary_line(self):
+        skipped = {'test_foo': 10, 'test_bar': 20, 'test_baz': 5}
+        output = self._run_with_skipped(skipped, verbose=False)
+        self.assertIn('3 up-to-date (35 tests)', output)
+        self.assertNotIn('test_foo', output)
+        self.assertNotIn('test_bar', output)
+
+    def test_verbose_per_module_lines(self):
+        skipped = {'test_foo': 10, 'test_bar': 20}
+        output = self._run_with_skipped(skipped, verbose=True)
+        self.assertIn('test_foo (10)', output)
+        self.assertIn('test_bar (20)', output)
+
+    def test_summary_includes_skipped_count(self):
+        skipped = {'test_foo': 10, 'test_bar': 20}
+        output = self._run_with_skipped(skipped)
+        self.assertIn('30 up-to-date', output)
+
+    def test_summary_no_skipped_when_empty(self):
+        output = self._run_with_skipped({})
+        self.assertNotIn('up-to-date', output)
+
+    def test_summary_skipped_dim_yellow(self):
+        buf = StringIO()
+        runner = RichTestRunner(buffer=True, skipped_modules={'test_foo': 5})
+        runner.console.file.close()
+        runner.console = Console(file=buf, width=80, force_terminal=True)
+        suite = unittest.TestSuite()
+        runner.run(suite)
+        output = buf.getvalue()
+        self.assertIn('5 up-to-date', output)
+
+
+class TestSummaryLine(unittest.TestCase):
+    """Tests for the pytest-style summary line."""
+
+    def _run_suite(self, *test_classes, skipped_modules=None):
+        buf = StringIO()
+        runner = RichTestRunner(buffer=True, skipped_modules=skipped_modules)
+        runner.console.file.close()
+        runner.console = Console(file=buf, width=80, force_terminal=True)
+        suite = unittest.TestSuite()
+        for cls in test_classes:
+            for name in unittest.TestLoader().getTestCaseNames(cls):
+                suite.addTest(cls(name))
+        result = runner.run(suite)
+        return result, buf.getvalue()
+
+    def test_all_passed(self):
+        class _Pass(unittest.TestCase):
+            def test_ok(self):
+                pass
+        _, output = self._run_suite(_Pass)
+        self.assertIn('1 passed', output)
+        self.assertNotIn('failed', output)
+        self.assertIn('─', output)
+
+    def test_failure_shows_failed_count(self):
+        class _Fail(unittest.TestCase):
+            def test_fail(self):
+                self.fail("boom")
+        _, output = self._run_suite(_Fail)
+        self.assertIn('1 failed', output)
+
+    def test_mixed_passed_and_failed(self):
+        class _Pass(unittest.TestCase):
+            def test_ok(self):
+                pass
+        class _Fail(unittest.TestCase):
+            def test_fail(self):
+                self.fail("boom")
+        _, output = self._run_suite(_Pass, _Fail)
+        self.assertIn('1 failed', output)
+        self.assertIn('1 passed', output)
+
+    def test_up_to_date_in_summary(self):
+        _, output = self._run_suite(skipped_modules={'test_foo': 10})
+        self.assertIn('10 up-to-date', output)
+
+    def test_time_in_summary(self):
+        class _Pass(unittest.TestCase):
+            def test_ok(self):
+                pass
+        _, output = self._run_suite(_Pass)
+        self.assertRegex(output, r'in \d+\.\d+s')

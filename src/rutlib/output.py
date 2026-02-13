@@ -158,7 +158,7 @@ def _test_header(test_id, label, width):
     ── test_module ──────── TestClass.test_method ──────── FAIL ──
     """
     dash = "─"
-    style = "red" if label == "FAIL" else "yellow"
+    style = "red"
 
     # Split test_id into module name and Class.method
     parts = test_id.split('.')
@@ -197,7 +197,6 @@ class RichTestResult(unittest.TestResult):
         self.console = console
         self.verbose = verbose
         self._original_handler_streams = {}
-        self._dot_line = Text()
         self._dot_count = 0
         self._term_width = console.width or 80
         self._fd_captures = {}
@@ -238,18 +237,17 @@ class RichTestResult(unittest.TestResult):
         super()._restoreStdout()
 
     def _add_dot(self, char, style):
-        self._dot_line.append(char, style=style)
+        self.console.print(Text(char, style=style), end="")
+        self.console.file.flush()
         self._dot_count += 1
         max_dots = max(self._term_width - 10, 10)
         if self._dot_count >= max_dots:
-            self.console.print(self._dot_line)
-            self._dot_line = Text()
+            self.console.print()
             self._dot_count = 0
 
     def _flush_dots(self):
         if self._dot_count > 0:
-            self.console.print(self._dot_line)
-            self._dot_line = Text()
+            self.console.print()
             self._dot_count = 0
 
     def _save_fd_output(self, test):
@@ -342,9 +340,17 @@ class RichTestRunner:
         result.failfast = self.failfast
         result.buffer = self.buffer
 
-        # Print skipped (up-to-date) modules first
-        for module, count in self.skipped_modules.items():
-            self.console.print(f"[yellow]⚡[/yellow] {module} ({count})")
+        # Print skipped (up-to-date) modules
+        if self.skipped_modules:
+            skipped_total = sum(self.skipped_modules.values())
+            if self.verbose:
+                for module, count in self.skipped_modules.items():
+                    self.console.print(f"[yellow]⚡[/yellow] {module} ({count})")
+            else:
+                n_modules = len(self.skipped_modules)
+                self.console.print(
+                    f"[yellow]⚡[/yellow] {n_modules} up-to-date ({skipped_total} tests)"
+                )
 
         start_time = time.time()
         suite.run(result)
@@ -354,12 +360,45 @@ class RichTestRunner:
         result._flush_dots()
         result.printErrors()
 
-        self.console.print("\n" + ("-" * 70))
-        self.console.print(f"Ran {result.testsRun} tests in {time_taken:.3f}s")
+        skipped_total = sum(self.skipped_modules.values()) if self.skipped_modules else 0
+        passed = result.testsRun - len(result.failures) - len(result.errors) - len(result.skipped)
+        ok = result.wasSuccessful()
+        dash_style = "bold green" if ok else "bold red"
 
-        if result.wasSuccessful():
-            self.console.print("\n[bold green]OK[/bold green]")
-        else:
-            self.console.print(f"\n[bold red]FAILED[/bold red] (failures={len(result.failures)}, errors={len(result.errors)})")
+        parts = []
+        if result.failures:
+            parts.append((f"{len(result.failures)} failed", "red"))
+        if result.errors:
+            parts.append((f"{len(result.errors)} errors", "bold red"))
+        if passed:
+            parts.append((f"{passed} passed", "bold green"))
+        if skipped_total:
+            parts.append((f"{skipped_total} up-to-date", "dim yellow"))
+
+        center = Text()
+        for i, (text, style) in enumerate(parts):
+            if i > 0:
+                center.append(", ")
+            center.append(text, style=style)
+        center.append(f" in {time_taken:.3f}s")
+
+        width = self.console.width or 80
+        content_len = len(center.plain) + 2  # spaces around center
+        remaining = max(width - content_len, 4)
+        left = remaining // 2
+        right = remaining - left
+
+        line = Text()
+        line.append("─" * left, style=dash_style)
+        line.append(f" {center.plain} ")
+        line.append("─" * right, style=dash_style)
+        # Re-build with styles by using append_text
+        line = Text()
+        line.append("─" * left, style=dash_style)
+        line.append(" ")
+        line.append_text(center)
+        line.append(" ")
+        line.append("─" * right, style=dash_style)
+        self.console.print(Text("\n").append_text(line))
 
         return result
