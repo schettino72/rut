@@ -190,9 +190,9 @@ class RutRunner:
             suite = self._filter_keyword(suite, self.keyword)
         if self.changed:
             modified_files = get_modified_files(self.source_dirs)
-            suite, self.skipped_modules = self._filter_modified(suite, modified_files)
+            suite, self.uptodate_modules = self._filter_modified(suite, modified_files)
         else:
-            self.skipped_modules = {}
+            self.uptodate_modules = {}
         self._check_async(suite)
         return suite
 
@@ -203,7 +203,7 @@ class RutRunner:
                 runner = runner_class(
                     failfast=self.failfast,
                     buffer=not self.capture,
-                    skipped_modules=self.skipped_modules,
+                    uptodate_modules=self.uptodate_modules,
                     verbose=self.verbose,
                 )
             else:
@@ -242,14 +242,14 @@ class RutRunner:
                     filtered.addTest(test)
         return filtered
 
-    def _filter_modified(self, suite, modified_files, skipped=None):
+    def _filter_modified(self, suite, modified_files, uptodate=None):
         """Filter suite to only include tests from modified files or their dependencies.
 
-        Returns (filtered_suite, skipped_modules) where skipped_modules is
+        Returns (filtered_suite, uptodate_modules) where uptodate_modules is
         a dict of module_name -> test_count for unchanged modules.
         """
-        if skipped is None:
-            skipped = {}
+        if uptodate is None:
+            uptodate = {}
 
         # Build set of modified module names from filepaths
         modified_modules = set()
@@ -273,7 +273,7 @@ class RutRunner:
         filtered = unittest.TestSuite()
         for test in suite:
             if isinstance(test, unittest.TestSuite):
-                sub_filtered, _ = self._filter_modified(test, modified_files, skipped)
+                sub_filtered, _ = self._filter_modified(test, modified_files, uptodate)
                 filtered.addTests(sub_filtered)
             else:
                 # Get the full module name for this test
@@ -298,8 +298,8 @@ class RutRunner:
                 if test_affected:
                     filtered.addTest(test)
                 else:
-                    skipped[test.__module__] = skipped.get(test.__module__, 0) + 1
-        return filtered, skipped
+                    uptodate[test.__module__] = uptodate.get(test.__module__, 0) + 1
+        return filtered, uptodate
 
     @classmethod
     def _check_async(cls, suite):

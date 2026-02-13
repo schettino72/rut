@@ -294,12 +294,12 @@ class TestFdCapturedOutput(unittest.TestCase):
         self.assertIn('FROM_FAILING_TEST', output)
 
 
-class TestSkippedModulesDisplay(unittest.TestCase):
-    """Tests for up-to-date (skipped) modules display in dot vs verbose mode."""
+class TestUptodateModulesDisplay(unittest.TestCase):
+    """Tests for up-to-date modules display in dot vs verbose mode."""
 
-    def _run_with_skipped(self, skipped_modules, verbose=False):
+    def _run_with_uptodate(self, uptodate_modules, verbose=False):
         buf = StringIO()
-        runner = RichTestRunner(buffer=True, skipped_modules=skipped_modules, verbose=verbose)
+        runner = RichTestRunner(buffer=True, uptodate_modules=uptodate_modules, verbose=verbose)
         runner.console.file.close()
         runner.console = Console(file=buf, width=80)
         suite = unittest.TestSuite()
@@ -307,30 +307,30 @@ class TestSkippedModulesDisplay(unittest.TestCase):
         return buf.getvalue()
 
     def test_dot_mode_single_summary_line(self):
-        skipped = {'test_foo': 10, 'test_bar': 20, 'test_baz': 5}
-        output = self._run_with_skipped(skipped, verbose=False)
+        uptodate = {'test_foo': 10, 'test_bar': 20, 'test_baz': 5}
+        output = self._run_with_uptodate(uptodate, verbose=False)
         self.assertIn('3 up-to-date (35 tests)', output)
         self.assertNotIn('test_foo', output)
         self.assertNotIn('test_bar', output)
 
     def test_verbose_per_module_lines(self):
-        skipped = {'test_foo': 10, 'test_bar': 20}
-        output = self._run_with_skipped(skipped, verbose=True)
+        uptodate = {'test_foo': 10, 'test_bar': 20}
+        output = self._run_with_uptodate(uptodate, verbose=True)
         self.assertIn('test_foo (10)', output)
         self.assertIn('test_bar (20)', output)
 
-    def test_summary_includes_skipped_count(self):
-        skipped = {'test_foo': 10, 'test_bar': 20}
-        output = self._run_with_skipped(skipped)
+    def test_summary_includes_uptodate_count(self):
+        uptodate = {'test_foo': 10, 'test_bar': 20}
+        output = self._run_with_uptodate(uptodate)
         self.assertIn('30 up-to-date', output)
 
-    def test_summary_no_skipped_when_empty(self):
-        output = self._run_with_skipped({})
+    def test_summary_no_uptodate_when_empty(self):
+        output = self._run_with_uptodate({})
         self.assertNotIn('up-to-date', output)
 
-    def test_summary_skipped_dim_yellow(self):
+    def test_summary_uptodate_dim_yellow(self):
         buf = StringIO()
-        runner = RichTestRunner(buffer=True, skipped_modules={'test_foo': 5})
+        runner = RichTestRunner(buffer=True, uptodate_modules={'test_foo': 5})
         runner.console.file.close()
         runner.console = Console(file=buf, width=80, force_terminal=True)
         suite = unittest.TestSuite()
@@ -342,9 +342,9 @@ class TestSkippedModulesDisplay(unittest.TestCase):
 class TestSummaryLine(unittest.TestCase):
     """Tests for the pytest-style summary line."""
 
-    def _run_suite(self, *test_classes, skipped_modules=None):
+    def _run_suite(self, *test_classes, uptodate_modules=None):
         buf = StringIO()
-        runner = RichTestRunner(buffer=True, skipped_modules=skipped_modules)
+        runner = RichTestRunner(buffer=True, uptodate_modules=uptodate_modules)
         runner.console.file.close()
         runner.console = Console(file=buf, width=80, force_terminal=True)
         suite = unittest.TestSuite()
@@ -382,7 +382,7 @@ class TestSummaryLine(unittest.TestCase):
         self.assertIn('1 passed', output)
 
     def test_up_to_date_in_summary(self):
-        _, output = self._run_suite(skipped_modules={'test_foo': 10})
+        _, output = self._run_suite(uptodate_modules={'test_foo': 10})
         self.assertIn('10 up-to-date', output)
 
     def test_time_in_summary(self):

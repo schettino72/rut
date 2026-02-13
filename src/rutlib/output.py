@@ -326,11 +326,11 @@ class RichTestResult(unittest.TestResult):
 
 
 class RichTestRunner:
-    def __init__(self, failfast=False, buffer=False, skipped_modules=None, verbose=False):
+    def __init__(self, failfast=False, buffer=False, uptodate_modules=None, verbose=False):
         self.failfast = failfast
         self.buffer = buffer
         self.verbose = verbose
-        self.skipped_modules = skipped_modules or {}
+        self.uptodate_modules = uptodate_modules or {}
         # Dup stdout fd so console output bypasses fd-level capture (dup2 won't affect this fd)
         console_fd = os.dup(sys.__stdout__.fileno())
         self.console = Console(file=os.fdopen(console_fd, 'w'))
@@ -340,16 +340,16 @@ class RichTestRunner:
         result.failfast = self.failfast
         result.buffer = self.buffer
 
-        # Print skipped (up-to-date) modules
-        if self.skipped_modules:
-            skipped_total = sum(self.skipped_modules.values())
+        # Print up-to-date modules
+        if self.uptodate_modules:
+            uptodate_total = sum(self.uptodate_modules.values())
             if self.verbose:
-                for module, count in self.skipped_modules.items():
+                for module, count in self.uptodate_modules.items():
                     self.console.print(f"[yellow]⚡[/yellow] {module} ({count})")
             else:
-                n_modules = len(self.skipped_modules)
+                n_modules = len(self.uptodate_modules)
                 self.console.print(
-                    f"[yellow]⚡[/yellow] {n_modules} up-to-date ({skipped_total} tests)"
+                    f"[yellow]⚡[/yellow] {n_modules} up-to-date ({uptodate_total} tests)"
                 )
 
         start_time = time.time()
@@ -360,7 +360,7 @@ class RichTestRunner:
         result._flush_dots()
         result.printErrors()
 
-        skipped_total = sum(self.skipped_modules.values()) if self.skipped_modules else 0
+        uptodate_total = sum(self.uptodate_modules.values()) if self.uptodate_modules else 0
         passed = result.testsRun - len(result.failures) - len(result.errors) - len(result.skipped)
         ok = result.wasSuccessful()
         dash_style = "bold green" if ok else "bold red"
@@ -372,8 +372,8 @@ class RichTestRunner:
             parts.append((f"{len(result.errors)} errors", "bold red"))
         if passed:
             parts.append((f"{passed} passed", "bold green"))
-        if skipped_total:
-            parts.append((f"{skipped_total} up-to-date", "dim yellow"))
+        if uptodate_total:
+            parts.append((f"{uptodate_total} up-to-date", "dim yellow"))
 
         center = Text()
         for i, (text, style) in enumerate(parts):
