@@ -37,6 +37,9 @@ class RutCLI:
                             help='Show test names instead of dots')
         parser.add_argument('--debug', action='store_true',
                             help='Show internal debug information (dependency graph, changed modules)')
+        # TODO: option to make -c the default via pyproject.toml (e.g. changed = true).
+        # Would need a CLI flag to reverse it (e.g. --all or --no-changed).
+        # Think through -k interaction with -c.
         parser.add_argument('-c', '--changed', action='store_true',
                             help='Run tests only from files changed since last successful run')
         self.args = parser.parse_args(argv)
@@ -106,6 +109,9 @@ class RutCLI:
         filters = []
         for filter_str in filters_spec:
             parts = filter_str.split(":")
+            # TODO: replace assert with proper error message.
+            # e.g. warning_filters = ["error:DeprecationWarning"] has only 2 parts
+            # and crashes with bare AssertionError. Should print user-friendly message.
             assert len(parts) >= 3
             filter_dict = {
                 'action': parts[0],

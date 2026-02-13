@@ -9,7 +9,7 @@
 **Repository:** https://github.com/schettino72/rut
 **License:** MIT
 **Author:** Eduardo Naufel Schettino
-**Python Requirements:** >=3.12
+**Python Requirements:** >=3.10
 **Dependencies:** coverage, rich>=14.0.0
 
 ## Features
@@ -72,8 +72,10 @@ rut -k "feature"
 | `--alpha` | `-a` | Sort tests alphabetically instead of by import dependencies. |
 | `--changed` | `-c` | Only run tests affected by file changes since last successful run. |
 | `--dry-run` | | List tests in execution order without running them. |
-| `--verbose` | `-v` | Show import dependency ranking. |
+| `--verbose` | `-v` | Show test names instead of dots. |
 | `--cov` | | Run with code coverage. |
+| `--no-color` | | Disable color output. |
+| `--debug` | | Show internal debug information (dependency graph, changed modules). |
 | `--version` | `-V` | Show version and exit. |
 | `--test-base-dir` | | The base directory for `conftest.py` discovery. |
 
@@ -81,15 +83,19 @@ rut -k "feature"
 
 | Argument | Description | Default |
 |---|---|---|
-| `path` | The path to the tests to be discovered. | `tests` |
+| `path` | Path to test file or directory to run. Does not affect project config. | discover all in test_dir |
 
 ## Configuration
 
 `rut` can be configured via the `[tool.rut]` section in your `pyproject.toml` file.
 
+`rut` looks for `pyproject.toml` in the current directory. If cwd is `tests/`, it also checks the parent directory and changes to it if found.
+
+Without `pyproject.toml`, rut runs in ad-hoc mode with `test_dir=.` and `source_dirs=["."]`.
+
 ### `source_dirs`
 
-Specifies the source directories for coverage reporting, incremental testing (`--changed`), and import dependency analysis. If not configured, the default is `["src", "tests"]`.
+Specifies the source directories for coverage reporting, incremental testing (`--changed`), and import dependency analysis. If not configured, the default is `["src", "tests"]`. Validated only when `--cov` or `--changed` is used.
 
 ```toml
 [tool.rut]

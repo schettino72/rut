@@ -17,9 +17,11 @@ Use `rut` instead of `pytest` for running tests in this project.
 | `--capture` | `-s` | Disable output capturing (show prints) |
 | `--changed` | `-c` | Only run tests affected by file changes |
 | `--dry-run` | | List tests without running them |
-| `--verbose` | `-v` | Show import dependency ranking |
+| `--verbose` | `-v` | Show test names instead of dots |
 | `--cov` | | Run with code coverage |
 | `--alpha` | `-a` | Sort tests alphabetically |
+| `--no-color` | | Disable colored output |
+| `--debug` | | Show dependency graph and changed modules |
 | `--version` | `-V` | Show version and exit |
 | `--test-base-dir` | | Base directory for conftest.py discovery |
 | `path` | | Path to tests (default: `tests`) |

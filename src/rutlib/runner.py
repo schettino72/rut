@@ -314,7 +314,6 @@ class RutRunner:
                 test_method = getattr(test, test._testMethodName)
                 if inspect.iscoroutinefunction(test_method):
                     if not isinstance(test, unittest.IsolatedAsyncioTestCase):
-                        # TODO: clean error output to user
                         raise InvalidAsyncTestError(
                             f'Testing method is a coroutine but class is not a `unittest.IsolatedAsyncioTestCase` => {test.id()}'
                         )

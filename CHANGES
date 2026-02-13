@@ -18,6 +18,7 @@ Changes
 - Added `--debug` flag (dependency graph, changed modules). `-v` no longer shows debug info.
 - FD-level output capture: subprocess stdout/stderr no longer leaks to terminal.
   Captured output shown in panels on test failure.
+- Improved output on terminal (color, diff, etc).
 
 
 0.3.0 (2026-02-03)
