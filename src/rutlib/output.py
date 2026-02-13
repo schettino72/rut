@@ -52,9 +52,10 @@ def _append_file_line(result, match):
     else:
         directory = ''
         filename = rel
+    file_url = f"file://{os.path.abspath(rel)}"
     if directory:
         result.append(directory, style="dim")
-    result.append(filename, style="bold cyan")
+    result.append(filename, style=f"bold cyan link {file_url}")
     result.append(":", style="dim")
     result.append(lineno, style="yellow")
     if func:
