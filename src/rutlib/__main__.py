@@ -50,6 +50,7 @@ def main():
         alpha=cli.args.alpha,
         source_dirs=cli.source_dirs,
         verbose=cli.args.verbose,
+        debug=cli.args.debug,
         changed=cli.args.changed,
     )
     suite = runner.load_tests()

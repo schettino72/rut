@@ -69,10 +69,12 @@ rut -k "feature"
 | `--alpha` | `-a` | Sort tests alphabetically instead of by import dependencies. |
 | `--changed` | `-c` | Only run tests affected by file changes since last successful run. |
 | `--dry-run` | | List tests in execution order without running them. |
-| `--verbose` | `-v` | Show import dependency ranking. |
+| `--verbose` | `-v` | Show test names instead of dots. |
+| `--debug` | | Show internal debug information (dependency graph, changed modules). |
 | `--cov` | | Run with code coverage. |
 | `--version` | `-V` | Show version and exit. |
 | `--test-base-dir` | | The base directory for `conftest.py` discovery. |
+| `--no-color` | | Disable color output. |
 
 ### Positional Arguments
 

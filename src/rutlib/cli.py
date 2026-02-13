@@ -34,7 +34,9 @@ class RutCLI:
         parser.add_argument('--dry-run', action='store_true',
                             help='List tests in execution order without running them')
         parser.add_argument('-v', '--verbose', action='store_true',
-                            help='Show verbose output including import dependency ranking')
+                            help='Show test names instead of dots')
+        parser.add_argument('--debug', action='store_true',
+                            help='Show internal debug information (dependency graph, changed modules)')
         parser.add_argument('-c', '--changed', action='store_true',
                             help='Run tests only from files changed since last successful run')
         self.args = parser.parse_args(argv)

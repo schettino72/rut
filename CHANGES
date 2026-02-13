@@ -13,6 +13,9 @@ Changes
 - Smart `sys.path` setup: walks up from cwd through `__init__.py` to find package root.
 - Display resolved `test_dir` and `source_dirs` on startup.
 - Support Python 3.10, 3.11, 3.12, 3.13, and 3.14.
+- Improved error output (color, traceback, diff).
+- Dot-mode progress by default, `-v` for full test names.
+- Added `--debug` flag (dependency graph, changed modules). `-v` no longer shows debug info.
 
 
 0.3.0 (2026-02-03)
@@ -22,7 +25,7 @@ Changes
 - Added `--alpha` / `-a` flag to use alphabetical ordering instead.
 - Added `--changed` / `-c` flag for incremental testing (only run tests affected by changes).
 - Added `--dry-run` flag to list tests without running them.
-- Added `--verbose` / `-v` flag to show import dependency ranking.
+- Added `--verbose` / `-v` flag.
 - Added `--version` / `-V` flag.
 - Colorized test output using `rich`.
 - Logging output is now captured along with stdout/stderr.

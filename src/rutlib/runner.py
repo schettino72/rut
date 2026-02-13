@@ -96,7 +96,7 @@ class WarningCollector:
 
 
 class RutRunner:
-    def __init__(self, test_dir, keyword, failfast, capture, warning_filters, alpha=False, source_dirs=None, verbose=False, changed=False, test_path=None):
+    def __init__(self, test_dir, keyword, failfast, capture, warning_filters, alpha=False, source_dirs=None, verbose=False, debug=False, changed=False, test_path=None):
         self.test_dir = test_dir
         self.test_path = test_path
         self.keyword = keyword
@@ -106,6 +106,7 @@ class RutRunner:
         self.alpha = alpha
         self.source_dirs = source_dirs or ["src", "tests"]
         self.verbose = verbose
+        self.debug = debug
         self.changed = changed
         self.module_filepaths = {}
         self.module_all_imports = {}
@@ -257,7 +258,7 @@ class RutRunner:
             if fp in filepath_to_module:
                 modified_modules.add(filepath_to_module[fp])
 
-        if self.verbose:
+        if self.debug:
             print("[DEBUG --changed] Modified modules:", modified_modules)
             print("[DEBUG --changed] All tracked modules:", set(self.module_filepaths.keys()))
 
@@ -290,7 +291,7 @@ class RutRunner:
                     bool(all_imports & modified_modules)
                 )
 
-                if self.verbose and full_module not in seen_modules:
+                if self.debug and full_module not in seen_modules:
                     print(f"[DEBUG] {full_module}: deps={all_imports}, affected={test_affected}")
                     seen_modules.add(full_module)
 
@@ -397,7 +398,7 @@ class RutRunner:
 
             sort_result = topological_sort(results)
 
-            if self.verbose:
+            if self.debug:
                 print("Import dependency ranking:")
                 for mod in sort_result.modules:
                     print(f"  {mod}: level={sort_result.levels[mod]}, depth={sort_result.depths[mod]}")
