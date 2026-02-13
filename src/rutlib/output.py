@@ -1,9 +1,12 @@
 import logging
+import os
 import re
 import sys
+import tempfile
 import time
 import unittest
 from rich.console import Console
+from rich.panel import Panel
 from rich.text import Text
 
 _file_re = re.compile(r'^(\s*File ")(.+)(",\s*line\s*)(\d+)(?:(,\s*in\s*)(.+))?$')
@@ -197,6 +200,7 @@ class RichTestResult(unittest.TestResult):
         self._dot_line = Text()
         self._dot_count = 0
         self._term_width = console.width or 80
+        self._fd_captures = {}
 
     def _setupStdout(self):
         super()._setupStdout()
@@ -209,9 +213,24 @@ class RichTestResult(unittest.TestResult):
                     elif handler.stream is self._original_stderr:
                         self._original_handler_streams[id(handler)] = handler.stream
                         handler.stream = self._stderr_buffer
+            # FD-level capture: redirect OS file descriptors 1/2 to temp files
+            # so subprocess output doesn't leak to terminal
+            self._stdout_fd_save = os.dup(1)
+            self._stderr_fd_save = os.dup(2)
+            self._stdout_fd_tmp = tempfile.TemporaryFile(buffering=0)
+            self._stderr_fd_tmp = tempfile.TemporaryFile(buffering=0)
+            os.dup2(self._stdout_fd_tmp.fileno(), 1)
+            os.dup2(self._stderr_fd_tmp.fileno(), 2)
 
     def _restoreStdout(self):
         if self.buffer:
+            # Restore OS file descriptors before Python-level restore
+            os.dup2(self._stdout_fd_save, 1)
+            os.dup2(self._stderr_fd_save, 2)
+            os.close(self._stdout_fd_save)
+            os.close(self._stderr_fd_save)
+            self._stdout_fd_tmp.close()
+            self._stderr_fd_tmp.close()
             for handler in logging.root.handlers:
                 if id(handler) in self._original_handler_streams:
                     handler.stream = self._original_handler_streams[id(handler)]
@@ -233,6 +252,34 @@ class RichTestResult(unittest.TestResult):
             self._dot_line = Text()
             self._dot_count = 0
 
+    def _save_fd_output(self, test):
+        if not self.buffer:
+            return
+        self._stdout_fd_tmp.seek(0)
+        stdout = self._stdout_fd_tmp.read().decode('utf-8', errors='replace')
+        self._stderr_fd_tmp.seek(0)
+        stderr = self._stderr_fd_tmp.read().decode('utf-8', errors='replace')
+        if stdout or stderr:
+            self._fd_captures[test.id()] = (stdout, stderr)
+
+    def _print_fd_captures(self, test):
+        captures = self._fd_captures.get(test.id())
+        if not captures:
+            return
+        stdout, stderr = captures
+        if stdout:
+            self.console.print(Panel(
+                stdout.rstrip('\n'),
+                title="Captured stdout (fd)",
+                border_style="dim",
+            ))
+        if stderr:
+            self.console.print(Panel(
+                stderr.rstrip('\n'),
+                title="Captured stderr (fd)",
+                border_style="dim red",
+            ))
+
     def addSuccess(self, test):
         super().addSuccess(test)
         if self.verbose:
@@ -242,6 +289,7 @@ class RichTestResult(unittest.TestResult):
 
     def addFailure(self, test, err):
         super().addFailure(test, err)
+        self._save_fd_output(test)
         if self.verbose:
             self.console.print(f"[bold red]✖[/bold red] {test.id()}")
         else:
@@ -249,6 +297,7 @@ class RichTestResult(unittest.TestResult):
 
     def addError(self, test, err):
         super().addError(test, err)
+        self._save_fd_output(test)
         if self.verbose:
             self.console.print(f"[bold red]✖[/bold red] {test.id()}")
         else:
@@ -270,10 +319,12 @@ class RichTestResult(unittest.TestResult):
             self.console.print(_test_header(test.id(), "ERROR", width))
             cleaned = _clean_traceback(err)
             self.console.print(_colorize_diff(cleaned, verbose=self.verbose))
+            self._print_fd_captures(test)
         for test, err in self.failures:
             self.console.print(_test_header(test.id(), "FAIL", width))
             cleaned = _clean_traceback(err)
             self.console.print(_colorize_diff(cleaned, verbose=self.verbose))
+            self._print_fd_captures(test)
 
 
 class RichTestRunner:
@@ -282,8 +333,9 @@ class RichTestRunner:
         self.buffer = buffer
         self.verbose = verbose
         self.skipped_modules = skipped_modules or {}
-        # Use sys.__stdout__ to bypass capture - test progress should always be visible
-        self.console = Console(file=sys.__stdout__)
+        # Dup stdout fd so console output bypasses fd-level capture (dup2 won't affect this fd)
+        console_fd = os.dup(sys.__stdout__.fileno())
+        self.console = Console(file=os.fdopen(console_fd, 'w'))
 
     def run(self, suite):
         result = RichTestResult(self.console, self.buffer, verbose=self.verbose)

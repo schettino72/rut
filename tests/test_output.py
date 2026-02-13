@@ -1,9 +1,11 @@
+import subprocess
+import sys
 import unittest
 from io import StringIO
 from rich.console import Console
 from rich.text import Text
 from rutlib.output import _clean_traceback, _colorize_diff, _test_header
-from rutlib.output import RichTestResult
+from rutlib.output import RichTestResult, RichTestRunner
 
 
 class TestCleanTraceback(unittest.TestCase):
@@ -221,3 +223,69 @@ class TestDotMode(unittest.TestCase):
         self.assertEqual(result._dot_count, 0)
         output = console.file.getvalue()
         self.assertIn('test_pass', output)
+
+
+class TestFdCapturedOutput(unittest.TestCase):
+    """Tests fd-capture through the real unittest lifecycle (buffer=True)."""
+
+    def _run_suite(self, *test_classes):
+        """Run test classes through RichTestRunner with buffer=True, return result and output."""
+        console_buf = StringIO()
+        runner = RichTestRunner(buffer=True)
+        # Close the dup'd fd console before replacing it
+        runner.console.file.close()
+        runner.console = Console(file=console_buf, width=80, force_terminal=True)
+        suite = unittest.TestSuite()
+        for cls in test_classes:
+            for name in unittest.TestLoader().getTestCaseNames(cls):
+                suite.addTest(cls(name))
+        result = runner.run(suite)
+        return result, console_buf.getvalue()
+
+    def test_subprocess_output_captured_on_failure(self):
+        class _SubprocessFail(unittest.TestCase):
+            def test_it(self):
+                subprocess.run([sys.executable, "-c", "print('CAPTURED_HELLO')"])
+                self.fail("boom")
+
+        result, output = self._run_suite(_SubprocessFail)
+        self.assertEqual(len(result.failures), 1)
+        self.assertIn('Captured stdout (fd)', output)
+        self.assertIn('CAPTURED_HELLO', output)
+
+    def test_subprocess_stderr_captured_on_failure(self):
+        class _StderrFail(unittest.TestCase):
+            def test_it(self):
+                subprocess.run([sys.executable, "-c",
+                                "import sys; print('CAPTURED_ERR', file=sys.stderr)"])
+                self.fail("boom")
+
+        result, output = self._run_suite(_StderrFail)
+        self.assertEqual(len(result.failures), 1)
+        self.assertIn('Captured stderr (fd)', output)
+        self.assertIn('CAPTURED_ERR', output)
+
+    def test_no_capture_panel_on_success(self):
+        class _Pass(unittest.TestCase):
+            def test_it(self):
+                subprocess.run([sys.executable, "-c", "print('SHOULD_NOT_APPEAR')"])
+
+        result, output = self._run_suite(_Pass)
+        self.assertTrue(result.wasSuccessful())
+        self.assertNotIn('Captured stdout (fd)', output)
+        self.assertNotIn('SHOULD_NOT_APPEAR', output)
+
+    def test_passing_test_output_not_in_next_failure(self):
+        class _Pass(unittest.TestCase):
+            def test_a_pass(self):
+                subprocess.run([sys.executable, "-c", "print('FROM_PASSING_TEST')"])
+
+        class _Fail(unittest.TestCase):
+            def test_b_fail(self):
+                subprocess.run([sys.executable, "-c", "print('FROM_FAILING_TEST')"])
+                self.fail("boom")
+
+        result, output = self._run_suite(_Pass, _Fail)
+        self.assertEqual(len(result.failures), 1)
+        self.assertNotIn('FROM_PASSING_TEST', output)
+        self.assertIn('FROM_FAILING_TEST', output)

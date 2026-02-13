@@ -1,6 +1,9 @@
-- [ ] Configuration Over Hardcoding: The WarningCollector has a hardcoded filter for
-      pydantic UserWarnings. In a real-world scenario, users would want to configure
-      this.
-       * Suggestion: Consider allowing users to configure warning filters through
-         command-line arguments (e.g., --warn-error "pydantic.*") or a configuration
-         section in pyproject.toml.
+- [ ] Live progress counter: show [ran/total] elapsed with fail count using rich.Live.
+      See full_output_improvements.patch — _build_status(), _update_status(), Live().
+
+- [ ] Short test summary (printFailureSummary): pytest-style summary after failures.
+      Needs _extract_file_line() and _extract_assertion_message() helpers.
+      See full_output_improvements.patch.
+
+- [ ] Code context in failure output: show test function source around the failing line
+      (like pytest's > marker). Use inspect or linecache.
