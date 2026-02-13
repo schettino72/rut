@@ -214,8 +214,13 @@ class RichTestResult(unittest.TestResult):
         self._current_module = None
         self._current_module_path = None
         self._dot_count = 0
+        self._line_col = 0
         self._tests_done = 0
         self._total_tests = 0
+        self._module_order = []
+        self._uptodate_modules = {}
+        self._next_order_idx = 0
+        self._printed_uptodate = set()
         self._term_width = console.width or 80
         self._fd_captures = {}
 
@@ -254,27 +259,36 @@ class RichTestResult(unittest.TestResult):
             self._original_handler_streams.clear()
         super()._restoreStdout()
 
-    def _module_path(self, test):
-        """Get relative file path for test's module."""
-        mod = sys.modules.get(test.__module__)
+    def _module_path(self, module_name):
+        """Get relative file path for a module."""
+        mod = sys.modules.get(module_name)
         if mod and hasattr(mod, '__file__') and mod.__file__:
             rel = os.path.relpath(mod.__file__)
             if not rel.startswith('..'):
                 return rel
-        return test.__module__
+        return module_name
+
+    _PCT_WIDTH = 7  # width of " [NNN%]"
 
     def _add_dot(self, test, char, style):
         module = test.__module__
         if module != self._current_module:
             self._flush_dots()
+            self._print_uptodate_before(module)
             self._current_module = module
-            self._current_module_path = self._module_path(test)
+            self._current_module_path = self._module_path(module)
             self._dot_count = 0
+            self._line_col = len(self._current_module_path) + 1
             self.console.print(Text(self._current_module_path + " ", style="dim"), end="")
             self.console.file.flush()
+        pct_reserve = self._PCT_WIDTH if self._total_tests > 0 else 0
+        if self._line_col + 1 + pct_reserve > self._term_width:
+            self.console.print()
+            self._line_col = 0
         self.console.print(Text(char, style=style), end="")
         self.console.file.flush()
         self._dot_count += 1
+        self._line_col += 1
         self._tests_done += 1
 
     def _flush_dots(self):
@@ -282,12 +296,60 @@ class RichTestResult(unittest.TestResult):
             if self._total_tests > 0:
                 pct = int(self._tests_done / self._total_tests * 100)
                 pct_str = f" [{pct:3d}%]"
+                padding = max(self._term_width - self._line_col - len(pct_str), 0)
+                self.console.print(Text(" " * padding + pct_str))
+            else:
+                self.console.print()
+            self._dot_count = 0
+
+    def _print_uptodate_before(self, module):
+        """Print up-to-date modules that come before `module` in execution order."""
+        while self._next_order_idx < len(self._module_order):
+            m = self._module_order[self._next_order_idx]
+            self._next_order_idx += 1
+            if m in self._uptodate_modules and m not in self._printed_uptodate:
+                self._print_uptodate_line(m)
+            if m == module:
+                break
+
+    def _print_uptodate_line(self, module):
+        """Print a single up-to-date module line with progress percentage."""
+        count = self._uptodate_modules[module]
+        self._tests_done += count
+        self._printed_uptodate.add(module)
+        path = self._module_path(module)
+        if self.verbose:
+            self.console.print(Text("⚡ ", style="yellow").append(path).append(f" ({count} up-to-date)", style="yellow"))
+        else:
+            line = Text(path + " ", style="dim")
+            line.append(f"⚡ {count} up-to-date", style="yellow")
+            if self._total_tests > 0:
+                pct = int(self._tests_done / self._total_tests * 100)
+                pct_str = f" [{pct:3d}%]"
             else:
                 pct_str = ""
-            used = len(self._current_module_path or "") + 1 + self._dot_count
-            padding = max(self._term_width - used - len(pct_str), 1)
-            self.console.print(" " * padding + pct_str)
-            self._dot_count = 0
+            padding = max(self._term_width - line.cell_len - len(pct_str), 1)
+            line.append(" " * padding + pct_str)
+            self.console.print(line)
+
+    def _flush_remaining_uptodate(self):
+        """Print any up-to-date modules not yet printed."""
+        while self._next_order_idx < len(self._module_order):
+            m = self._module_order[self._next_order_idx]
+            self._next_order_idx += 1
+            if m in self._uptodate_modules and m not in self._printed_uptodate:
+                self._print_uptodate_line(m)
+        for m in self._uptodate_modules:
+            if m not in self._printed_uptodate:
+                self._print_uptodate_line(m)
+
+    def _check_module_verbose(self, test):
+        """In verbose mode, print up-to-date modules before a new module starts."""
+        module = test.__module__
+        if module != self._current_module:
+            self._print_uptodate_before(module)
+            self._current_module = module
+        self._tests_done += 1
 
     def _save_fd_output(self, test):
         if not self.buffer:
@@ -320,6 +382,7 @@ class RichTestResult(unittest.TestResult):
     def addSuccess(self, test):
         super().addSuccess(test)
         if self.verbose:
+            self._check_module_verbose(test)
             self.console.print(f"[green]✔[/green] {test.id()}")
         else:
             self._add_dot(test, ".", "green")
@@ -328,6 +391,7 @@ class RichTestResult(unittest.TestResult):
         super().addFailure(test, err)
         self._save_fd_output(test)
         if self.verbose:
+            self._check_module_verbose(test)
             self.console.print(f"[bold red]✖[/bold red] {test.id()}")
         else:
             self._add_dot(test, "F", "bold red")
@@ -336,6 +400,7 @@ class RichTestResult(unittest.TestResult):
         super().addError(test, err)
         self._save_fd_output(test)
         if self.verbose:
+            self._check_module_verbose(test)
             self.console.print(f"[bold red]✖[/bold red] {test.id()}")
         else:
             self._add_dot(test, "E", "bold red")
@@ -343,6 +408,7 @@ class RichTestResult(unittest.TestResult):
     def addSkip(self, test, reason):
         super().addSkip(test, reason)
         if self.verbose:
+            self._check_module_verbose(test)
             self.console.print(f"[yellow]SKIP[/yellow] {test.id()}: {reason}")
         else:
             self._add_dot(test, "s", "yellow")
@@ -386,11 +452,12 @@ class RichTestResult(unittest.TestResult):
 
 
 class RichTestRunner:
-    def __init__(self, failfast=False, buffer=False, uptodate_modules=None, verbose=False):
+    def __init__(self, failfast=False, buffer=False, uptodate_modules=None, verbose=False, module_order=None):
         self.failfast = failfast
         self.buffer = buffer
         self.verbose = verbose
         self.uptodate_modules = uptodate_modules or {}
+        self.module_order = module_order or []
         # Dup stdout fd so console output bypasses fd-level capture (dup2 won't affect this fd)
         console_fd = os.dup(sys.__stdout__.fileno())
         self.console = Console(file=os.fdopen(console_fd, 'w'))
@@ -399,26 +466,18 @@ class RichTestRunner:
         result = RichTestResult(self.console, self.buffer, verbose=self.verbose)
         result.failfast = self.failfast
         result.buffer = self.buffer
+        result._module_order = self.module_order
+        result._uptodate_modules = self.uptodate_modules
 
-        # Print up-to-date modules
-        if self.uptodate_modules:
-            uptodate_total = sum(self.uptodate_modules.values())
-            if self.verbose:
-                for module, count in self.uptodate_modules.items():
-                    self.console.print(f"[yellow]⚡[/yellow] {module} ({count})")
-            else:
-                n_modules = len(self.uptodate_modules)
-                self.console.print(
-                    f"[yellow]⚡[/yellow] {n_modules} up-to-date ({uptodate_total} tests)"
-                )
-
-        result._total_tests = suite.countTestCases()
+        uptodate_total = sum(self.uptodate_modules.values()) if self.uptodate_modules else 0
+        result._total_tests = suite.countTestCases() + uptodate_total
         start_time = time.time()
         suite.run(result)
         stop_time = time.time()
 
         time_taken = stop_time - start_time
         result._flush_dots()
+        result._flush_remaining_uptodate()
         result.printErrors()
 
         uptodate_total = sum(self.uptodate_modules.values()) if self.uptodate_modules else 0

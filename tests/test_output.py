@@ -248,6 +248,25 @@ class TestDotMode(unittest.TestCase):
         output = console.file.getvalue()
         self.assertIn('[100%]', output)
 
+    def test_dots_wrap_preserving_percentage_space(self):
+        """When dots would overflow into percentage area, wrap to next line."""
+        # Use narrow width so wrapping happens with few dots
+        console = Console(file=StringIO(), width=40)
+        result = RichTestResult(console, buffer=False, verbose=False)
+        result._total_tests = 50
+        test = self._Pass('test_pass')
+        # Module path "tests/test_output.py" ~22 chars + space = 23
+        # Available for dots: 40 - 23 - 7 (pct) = 10
+        for _ in range(15):
+            result.addSuccess(test)
+        result._flush_dots()
+        output = console.file.getvalue()
+        # Percentage should appear right-aligned, not colliding with dots
+        self.assertIn('%]', output)
+        # Dots should have wrapped (newline within the dots)
+        lines = output.strip().split('\n')
+        self.assertGreater(len(lines), 1, "Expected dots to wrap to a second line")
+
     def test_module_boundary_triggers_newline(self):
         """When a test from a different module arrives, the previous line is flushed."""
         console = Console(file=StringIO(), width=80)
@@ -344,18 +363,89 @@ class TestUptodateModulesDisplay(unittest.TestCase):
         runner.run(suite)
         return buf.getvalue()
 
-    def test_dot_mode_single_summary_line(self):
+    def test_dot_mode_per_module_lines(self):
         uptodate = {'test_foo': 10, 'test_bar': 20, 'test_baz': 5}
         output = self._run_with_uptodate(uptodate, verbose=False)
-        self.assertIn('3 up-to-date (35 tests)', output)
-        self.assertNotIn('test_foo', output)
-        self.assertNotIn('test_bar', output)
+        self.assertIn('test_foo', output)
+        self.assertIn('10 up-to-date', output)
+        self.assertIn('test_bar', output)
+        self.assertIn('20 up-to-date', output)
+        self.assertIn('test_baz', output)
+        self.assertIn('5 up-to-date', output)
 
     def test_verbose_per_module_lines(self):
         uptodate = {'test_foo': 10, 'test_bar': 20}
         output = self._run_with_uptodate(uptodate, verbose=True)
-        self.assertIn('test_foo (10)', output)
-        self.assertIn('test_bar (20)', output)
+        self.assertIn('test_foo', output)
+        self.assertIn('10 up-to-date', output)
+        self.assertIn('test_bar', output)
+        self.assertIn('20 up-to-date', output)
+
+    def test_uptodate_interleaved_with_module_order(self):
+        """Up-to-date modules appear in execution order, interleaved with running tests."""
+        buf = StringIO()
+        uptodate = {'test_cache': 7}
+        module_order = ['test_cache', 'test_output']
+        runner = RichTestRunner(buffer=True, uptodate_modules=uptodate, module_order=module_order)
+        runner.console.file.close()
+        runner.console = Console(file=buf, width=80)
+
+        class _Pass(unittest.TestCase):
+            __module__ = 'test_output'
+            def test_ok(self):
+                pass
+
+        suite = unittest.TestSuite([_Pass('test_ok')])
+        runner.run(suite)
+        output = buf.getvalue()
+        # test_cache (up-to-date) should appear before test_output (running)
+        cache_pos = output.find('test_cache')
+        output_pos = output.find('test_output')
+        self.assertGreater(cache_pos, -1)
+        self.assertGreater(output_pos, -1)
+        self.assertLess(cache_pos, output_pos)
+
+    def test_uptodate_after_running_module(self):
+        """Up-to-date modules appearing after running tests are printed at the end."""
+        buf = StringIO()
+        uptodate = {'test_zz_last': 3}
+        module_order = ['test_output', 'test_zz_last']
+        runner = RichTestRunner(buffer=True, uptodate_modules=uptodate, module_order=module_order)
+        runner.console.file.close()
+        runner.console = Console(file=buf, width=80)
+
+        class _Pass(unittest.TestCase):
+            __module__ = 'test_output'
+            def test_ok(self):
+                pass
+
+        suite = unittest.TestSuite([_Pass('test_ok')])
+        runner.run(suite)
+        output = buf.getvalue()
+        output_pos = output.find('test_output')
+        last_pos = output.find('test_zz_last')
+        self.assertGreater(output_pos, -1)
+        self.assertGreater(last_pos, -1)
+        self.assertLess(output_pos, last_pos)
+
+    def test_uptodate_percentage_includes_uptodate_count(self):
+        """Percentage accounts for both running and up-to-date tests."""
+        buf = StringIO()
+        uptodate = {'test_cache': 10}
+        module_order = ['test_cache', 'test_output']
+        runner = RichTestRunner(buffer=True, uptodate_modules=uptodate, module_order=module_order)
+        runner.console.file.close()
+        runner.console = Console(file=buf, width=80)
+
+        class _Pass(unittest.TestCase):
+            __module__ = 'test_output'
+            def test_ok(self):
+                pass
+
+        suite = unittest.TestSuite([_Pass('test_ok')])
+        runner.run(suite)
+        output = buf.getvalue()
+        self.assertIn('[100%]', output)
 
     def test_summary_includes_uptodate_count(self):
         uptodate = {'test_foo': 10, 'test_bar': 20}

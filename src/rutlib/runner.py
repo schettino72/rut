@@ -205,6 +205,7 @@ class RutRunner:
                     buffer=not self.capture,
                     uptodate_modules=self.uptodate_modules,
                     verbose=self.verbose,
+                    module_order=getattr(self, 'sorted_modules', None),
                 )
             else:
                 runner = unittest.TextTestRunner(
@@ -361,6 +362,8 @@ class RutRunner:
         else:
             # Topological ordering by import dependencies
             sorted_modules = self._get_topological_order(tests_by_module.keys())
+
+        self.sorted_modules = list(sorted_modules)
 
         # Build final suite
         pos_suite = unittest.TestSuite()
