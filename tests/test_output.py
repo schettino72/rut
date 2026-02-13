@@ -194,9 +194,10 @@ class TestDotMode(unittest.TestCase):
         def test_fail(self):
             self.fail("boom")
 
-    def _make_result(self, verbose=False):
+    def _make_result(self, verbose=False, total_tests=0):
         console = Console(file=StringIO(), width=80)
         result = RichTestResult(console, buffer=False, verbose=verbose)
+        result._total_tests = total_tests
         return result, console
 
     def test_dot_on_success(self):
@@ -228,6 +229,41 @@ class TestDotMode(unittest.TestCase):
         self.assertEqual(result._dot_count, 0)
         output = console.file.getvalue()
         self.assertIn('test_pass', output)
+
+    def test_module_name_in_output(self):
+        result, console = self._make_result(verbose=False)
+        test = self._Pass('test_pass')
+        result.addSuccess(test)
+        result._flush_dots()
+        output = console.file.getvalue()
+        # Module name should appear before dots
+        self.assertIn('test_output', output)
+
+    def test_percentage_in_output(self):
+        result, console = self._make_result(verbose=False, total_tests=2)
+        test = self._Pass('test_pass')
+        result.addSuccess(test)
+        result.addSuccess(test)
+        result._flush_dots()
+        output = console.file.getvalue()
+        self.assertIn('[100%]', output)
+
+    def test_module_boundary_triggers_newline(self):
+        """When a test from a different module arrives, the previous line is flushed."""
+        console = Console(file=StringIO(), width=80)
+        result = RichTestResult(console, buffer=False, verbose=False)
+        result._total_tests = 2
+        test1 = self._Pass('test_pass')
+        result.addSuccess(test1)
+        # Simulate a test from a different module
+        test2 = self._Fail('test_fail')
+        test2.__class__.__module__ = 'fake_other_module'
+        result.addFailure(test2, (None, None, None))
+        result._flush_dots()
+        output = console.file.getvalue()
+        # Both module names should appear on separate lines
+        self.assertIn('test_output', output)
+        self.assertIn('fake_other_module', output)
 
 
 class TestFdCapturedOutput(unittest.TestCase):

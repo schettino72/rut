@@ -211,7 +211,11 @@ class RichTestResult(unittest.TestResult):
         self.console = console
         self.verbose = verbose
         self._original_handler_streams = {}
+        self._current_module = None
+        self._current_module_path = None
         self._dot_count = 0
+        self._tests_done = 0
+        self._total_tests = 0
         self._term_width = console.width or 80
         self._fd_captures = {}
 
@@ -250,18 +254,39 @@ class RichTestResult(unittest.TestResult):
             self._original_handler_streams.clear()
         super()._restoreStdout()
 
-    def _add_dot(self, char, style):
+    def _module_path(self, test):
+        """Get relative file path for test's module."""
+        mod = sys.modules.get(test.__module__)
+        if mod and hasattr(mod, '__file__') and mod.__file__:
+            rel = os.path.relpath(mod.__file__)
+            if not rel.startswith('..'):
+                return rel
+        return test.__module__
+
+    def _add_dot(self, test, char, style):
+        module = test.__module__
+        if module != self._current_module:
+            self._flush_dots()
+            self._current_module = module
+            self._current_module_path = self._module_path(test)
+            self._dot_count = 0
+            self.console.print(Text(self._current_module_path + " ", style="dim"), end="")
+            self.console.file.flush()
         self.console.print(Text(char, style=style), end="")
         self.console.file.flush()
         self._dot_count += 1
-        max_dots = max(self._term_width - 10, 10)
-        if self._dot_count >= max_dots:
-            self.console.print()
-            self._dot_count = 0
+        self._tests_done += 1
 
     def _flush_dots(self):
         if self._dot_count > 0:
-            self.console.print()
+            if self._total_tests > 0:
+                pct = int(self._tests_done / self._total_tests * 100)
+                pct_str = f" [{pct:3d}%]"
+            else:
+                pct_str = ""
+            used = len(self._current_module_path or "") + 1 + self._dot_count
+            padding = max(self._term_width - used - len(pct_str), 1)
+            self.console.print(" " * padding + pct_str)
             self._dot_count = 0
 
     def _save_fd_output(self, test):
@@ -297,7 +322,7 @@ class RichTestResult(unittest.TestResult):
         if self.verbose:
             self.console.print(f"[green]✔[/green] {test.id()}")
         else:
-            self._add_dot(".", "green")
+            self._add_dot(test, ".", "green")
 
     def addFailure(self, test, err):
         super().addFailure(test, err)
@@ -305,7 +330,7 @@ class RichTestResult(unittest.TestResult):
         if self.verbose:
             self.console.print(f"[bold red]✖[/bold red] {test.id()}")
         else:
-            self._add_dot("F", "bold red")
+            self._add_dot(test, "F", "bold red")
 
     def addError(self, test, err):
         super().addError(test, err)
@@ -313,14 +338,14 @@ class RichTestResult(unittest.TestResult):
         if self.verbose:
             self.console.print(f"[bold red]✖[/bold red] {test.id()}")
         else:
-            self._add_dot("E", "bold red")
+            self._add_dot(test, "E", "bold red")
 
     def addSkip(self, test, reason):
         super().addSkip(test, reason)
         if self.verbose:
             self.console.print(f"[yellow]SKIP[/yellow] {test.id()}: {reason}")
         else:
-            self._add_dot("s", "yellow")
+            self._add_dot(test, "s", "yellow")
 
     def printErrors(self):
         if not self.errors and not self.failures:
@@ -387,6 +412,7 @@ class RichTestRunner:
                     f"[yellow]⚡[/yellow] {n_modules} up-to-date ({uptodate_total} tests)"
                 )
 
+        result._total_tests = suite.countTestCases()
         start_time = time.time()
         suite.run(result)
         stop_time = time.time()
