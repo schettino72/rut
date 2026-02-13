@@ -115,8 +115,10 @@ class TestColorizeDiff(unittest.TestCase):
         result = _colorize_diff(tb)
         plain = result.plain
         self.assertIn('test_foo.py', plain)
-        self.assertIn('19', plain)
-        self.assertIn('test_bar', plain)
+        self.assertIn(':19', plain)
+        self.assertIn('in test_bar', plain)
+        # No File " prefix or ", line " in new compact format
+        self.assertNotIn('File "', plain)
         styles = [str(s.style) for s in result._spans]
         self.assertTrue(any('bold cyan' in s for s in styles))
         self.assertTrue(any('yellow' in s for s in styles))

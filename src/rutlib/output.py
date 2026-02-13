@@ -40,24 +40,25 @@ def _clean_traceback(tb_string):
 
 
 def _append_file_line(result, match):
-    """Append a parsed File line with per-component styles."""
-    prefix, path, mid, lineno, in_part, func = match.groups()
-    # Split path into directory + filename
-    sep = path.rfind('/')
+    """Append a parsed File line as compact path:line in func."""
+    _prefix, path, _mid, lineno, _in_part, func = match.groups()
+    rel = os.path.relpath(path)
+    if rel.startswith('..'):
+        rel = path
+    sep = rel.rfind('/')
     if sep >= 0:
-        directory = path[:sep + 1]
-        filename = path[sep + 1:]
+        directory = rel[:sep + 1]
+        filename = rel[sep + 1:]
     else:
         directory = ''
-        filename = path
-    result.append(prefix, style="dim")
+        filename = rel
     if directory:
         result.append(directory, style="dim")
     result.append(filename, style="bold cyan")
-    result.append(mid, style="dim")
+    result.append(":", style="dim")
     result.append(lineno, style="yellow")
-    if in_part and func:
-        result.append(in_part, style="dim")
+    if func:
+        result.append(" in ", style="dim")
         result.append(func, style="cyan")
     result.append('\n')
 
