@@ -13,6 +13,18 @@ _file_re = re.compile(r'^(\s*File ")(.+)(",\s*line\s*)(\d+)(?:(,\s*in\s*)(.+))?$
 _exc_re = re.compile(r'^(\w+(?:Error|Exception))\b(.*)')
 
 
+def _colorize_exc_line(exc_line):
+    """Colorize an exception line: class name in bold yellow, message in red."""
+    result = Text("    ")
+    m = _exc_re.match(exc_line)
+    if m:
+        result.append(m.group(1), style="bold yellow")
+        result.append(m.group(2), style="red")
+    else:
+        result.append(exc_line, style="red")
+    return result
+
+
 def _clean_traceback(tb_string):
     """Strip internal unittest/rutlib frames from a traceback string.
 
@@ -325,6 +337,27 @@ class RichTestResult(unittest.TestResult):
             cleaned = _clean_traceback(err)
             self.console.print(_colorize_diff(cleaned, verbose=self.verbose))
             self._print_fd_captures(test)
+        if len(self.errors) + len(self.failures) > 1:
+            self.console.print()
+            label = " SHORT TEST SUMMARY "
+            remaining = max(width - len(label), 4)
+            left_dashes = remaining // 2
+            right_dashes = remaining - left_dashes
+            header = Text("─" * left_dashes, style="dim")
+            header.append(label, style="bold")
+            header.append("─" * right_dashes, style="dim")
+            self.console.print(header)
+            n = 0
+            for test, err in self.errors:
+                n += 1
+                exc_line = err.strip().splitlines()[-1]
+                self.console.print(Text(f"({n}) ", style="dim") + Text(test.id()))
+                self.console.print(_colorize_exc_line(exc_line))
+            for test, err in self.failures:
+                n += 1
+                exc_line = err.strip().splitlines()[-1]
+                self.console.print(Text(f"({n}) ", style="dim") + Text(test.id()))
+                self.console.print(_colorize_exc_line(exc_line))
 
 
 class RichTestRunner:
@@ -375,7 +408,7 @@ class RichTestRunner:
         if passed:
             parts.append((f"{passed} passed", "bold green"))
         if uptodate_total:
-            parts.append((f"{uptodate_total} up-to-date", "dim yellow"))
+            parts.append((f"{uptodate_total} up-to-date", "cyan"))
 
         center = Text()
         for i, (text, style) in enumerate(parts):
@@ -390,11 +423,6 @@ class RichTestRunner:
         left = remaining // 2
         right = remaining - left
 
-        line = Text()
-        line.append("─" * left, style=dash_style)
-        line.append(f" {center.plain} ")
-        line.append("─" * right, style=dash_style)
-        # Re-build with styles by using append_text
         line = Text()
         line.append("─" * left, style=dash_style)
         line.append(" ")

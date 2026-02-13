@@ -393,3 +393,48 @@ class TestSummaryLine(unittest.TestCase):
                 pass
         _, output = self._run_suite(_Pass)
         self.assertRegex(output, r'in \d+\.\d+s')
+
+
+class TestShortTestSummary(unittest.TestCase):
+    """Tests for the short test summary section."""
+
+    def _run_suite(self, *test_classes):
+        buf = StringIO()
+        runner = RichTestRunner(buffer=True)
+        runner.console.file.close()
+        runner.console = Console(file=buf, width=80, force_terminal=True)
+        suite = unittest.TestSuite()
+        for cls in test_classes:
+            for name in unittest.TestLoader().getTestCaseNames(cls):
+                suite.addTest(cls(name))
+        runner.run(suite)
+        return buf.getvalue()
+
+    def test_shown_when_multiple_failures(self):
+        class _Fail1(unittest.TestCase):
+            def test_a(self):
+                self.fail("first")
+        class _Fail2(unittest.TestCase):
+            def test_b(self):
+                self.fail("second")
+        output = self._run_suite(_Fail1, _Fail2)
+        self.assertIn('SHORT TEST SUMMARY', output)
+        self.assertIn('FAIL', output)
+
+    def test_not_shown_when_single_failure(self):
+        class _Fail(unittest.TestCase):
+            def test_a(self):
+                self.fail("only one")
+        output = self._run_suite(_Fail)
+        self.assertNotIn('SHORT TEST SUMMARY', output)
+
+    def test_includes_exception_message(self):
+        class _Fail1(unittest.TestCase):
+            def test_a(self):
+                self.assertEqual(1, 2)
+        class _Fail2(unittest.TestCase):
+            def test_b(self):
+                self.assertEqual(3, 4)
+        output = self._run_suite(_Fail1, _Fail2)
+        self.assertIn('1 != 2', output)
+        self.assertIn('3 != 4', output)

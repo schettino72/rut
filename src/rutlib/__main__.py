@@ -3,6 +3,7 @@ import sys
 import shutil
 import coverage
 from rich import print
+from . import __version__
 from .cache import update_cache
 from .cli import RutCLI
 from .output import RichTestRunner
@@ -34,7 +35,7 @@ def main():
     cli = RutCLI()
     cli.parse_args()
     cli.setup()
-    print(f"[dim]rut config: test_dir={cli.test_dir}  source_dirs={', '.join(cli.source_dirs)}[/dim]")
+    print(f"[dim]rut {__version__}: test_dir={cli.test_dir}  source_dirs={', '.join(cli.source_dirs)}[/dim]")
 
     if cli.args.cov:
         cov = coverage.Coverage(source=cli.source_dirs)
