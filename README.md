@@ -213,6 +213,10 @@ A [Claude Code](https://claude.com/claude-code) plugin is included in the `llm/c
 /plugin install rut-testing@rut
 ```
 
+## Demo Project
+
+A self-contained demo project for recording asciinema demos lives in [`demo/`](demo/). It's a mini personal finance tracker with ~20 tests — stable and reproducible, independent of rut's own code changes. See [`demo/README.md`](demo/README.md) for details.
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

@@ -1,0 +1,8 @@
+[project]
+name = "finance-demo"
+version = "0.1.0"
+description = "Mini personal finance tracker — demo project for rut CLI recordings"
+requires-python = ">=3.10"
+
+[tool.rut]
+source_dirs = ["finance", "tests"]
