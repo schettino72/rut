@@ -18,7 +18,7 @@ Source directories for coverage, incremental testing, and import analysis. Defau
 
 ```toml
 [tool.rut]
-source_dirs = ["my_app", "libs/my_lib"]
+source_dirs = ["finance", "tests"]
 ```
 
 ### warning_filters
@@ -48,9 +48,11 @@ test_base_dir = "my_tests"
 ```python
 import unittest
 
-class MyTest(unittest.TestCase):
-    def test_something(self):
-        self.assertEqual(1 + 1, 2)
+class TestAccount(unittest.TestCase):
+    def test_deposit(self):
+        account = Account("Savings", "USD")
+        account.deposit(100)
+        self.assertEqual(account.balance, 100)
 ```
 
 ### Async Tests

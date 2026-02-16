@@ -26,7 +26,7 @@ Are you a fan of the stability and explicitness of `unittest`, but wish you had 
 
 *   **Zero-Config Discovery:** Just run `rut`. No more writing `if __name__ == '__main__':` boilerplate.
 *   **First-Class `asyncio` Support:** `rut` automatically detects and runs `async` tests correctly. No more `asyncio.run()` wrappers.
-*   **Powerful Filtering:** Run exactly the tests you want with simple keyword filtering (`-k "my_feature"`).
+*   **Powerful Filtering:** Run exactly the tests you want with simple keyword filtering (`-k "transfer"`).
 *   **Integrated Coverage:** Get a full coverage report with a single flag (`--cov`).
 
 ### For the `pytest` User: Simplicity and Power, Reunited
@@ -53,10 +53,10 @@ rut [options] [path]
 
 ### Example
 
-To run all tests in the `tests/` directory that have the word "feature" in their name, you would run:
+To run all tests in the `tests/` directory that have the word "transfer" in their name, you would run:
 
 ```bash
-rut -k "feature"
+rut -k "transfer"
 ```
 
 ### Options
@@ -96,7 +96,7 @@ Specifies the source directories for coverage reporting, incremental testing (`-
 
 ```toml
 [tool.rut]
-source_dirs = ["my_app", "libs/my_lib"]
+source_dirs = ["finance", "tests"]
 ```
 
 ### `warning_filters`
@@ -128,9 +128,11 @@ For standard, synchronous tests, you can use the standard `unittest.TestCase`.
 ```python
 import unittest
 
-class MyTest(unittest.TestCase):
-    def test_something(self):
-        self.assertEqual(1 + 1, 2)
+class TestAccount(unittest.TestCase):
+    def test_deposit(self):
+        account = Account("Savings", "USD")
+        account.deposit(100)
+        self.assertEqual(account.balance, 100)
 ```
 
 ### Async Tests

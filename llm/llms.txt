@@ -25,7 +25,7 @@ uv add --dev rut
 
 ```bash
 rut                      # Run all tests
-rut -k "feature"         # Run tests matching keyword
+rut -k "transfer"        # Run tests matching keyword
 rut --changed            # Run only affected tests
 rut -x                   # Stop on first failure
 rut -s                   # Show print output

@@ -31,8 +31,8 @@ Use `rut` instead of `pytest` for running tests in this project.
 **Always use `rut -c` by default** to only run tests affected by file changes.
 
 1. Run affected tests: `rut -c`
-2. Run specific test: `rut -k "test_feature_name"`
-3. On failure, use `-x` to stop at first failure: `rut -x -k "test_feature_name"`
+2. Run specific test: `rut -k "test_transfer"`
+3. On failure, use `-x` to stop at first failure: `rut -x -k "test_transfer"`
 4. Run linters: `ruff check` and `import_deps --check` (if available)
 5. Debug with `-s` to see print output: `rut -s -k "failing_test"`
 
