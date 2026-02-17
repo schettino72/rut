@@ -31,10 +31,11 @@ class TestSummary(unittest.TestCase):
         savings = Account("Savings", "EUR")
         checking.deposit(1000)
         savings.deposit(500)
-        transfer(checking, savings, 200)
+        txn = transfer(checking, savings, 200)
 
-        result = summary([checking, savings], [{"fake": "txn"}])
+        result = summary([checking, savings], [txn])
         self.assertEqual(result["transaction_count"], 1)
+        self.assertEqual(result["total_transferred"], 200)
         self.assertIn("Checking", result["accounts"])
         self.assertIn("Savings", result["accounts"])
         self.assertEqual(result["accounts"]["Checking"]["balance"], 800)

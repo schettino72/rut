@@ -4,6 +4,7 @@ import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
+from finance.account import InsufficientFundsError
 from finance.currency import convert
 
 
@@ -27,7 +28,13 @@ def transfer(from_acct, to_acct, amount):
     if amount <= 0:
         raise ValueError("Transfer amount must be positive")
 
-    from_acct.withdraw(amount)
+    try:
+        from_acct.withdraw(amount)
+    except InsufficientFundsError:
+        raise InsufficientFundsError(
+            f"Transfer of {amount} {from_acct.currency} failed: "
+            f"{from_acct.name} has only {from_acct.balance} {from_acct.currency}"
+        )
     time.sleep(0.4)  # simulate transaction processing
 
     if from_acct.currency == to_acct.currency:

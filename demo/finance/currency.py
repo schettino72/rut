@@ -2,6 +2,8 @@
 
 import time
 
+from finance.utils import round_amount
+
 
 class RateNotFoundError(Exception):
     """Raised when a currency is not in the rates table."""
@@ -26,4 +28,4 @@ def convert(amount, from_currency, to_currency):
         return amount
     time.sleep(0.2)  # simulate rate service lookup
     usd = amount * RATES[from_currency]
-    return round(usd / RATES[to_currency], 2)
+    return round_amount(usd / RATES[to_currency])
