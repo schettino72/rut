@@ -18,3 +18,6 @@ dist/
 # Gemini
 GEMINI.md
 .claude
+
+# Local uv overrides (dev-only, not for consumers)
+uv.toml
