@@ -18,3 +18,4 @@ dist/
 # Gemini
 GEMINI.md
 .claude
+uv.toml

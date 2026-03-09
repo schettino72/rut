@@ -51,5 +51,4 @@ source_dirs = ["src", "tests"]
 package = true
 
 [tool.uv.sources]
-import-deps = { path = "/home/eduardo/work/import-deps", editable = true }
 rut = { path = ".", editable = true }
