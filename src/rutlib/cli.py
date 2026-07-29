@@ -109,10 +109,13 @@ class RutCLI:
         filters = []
         for filter_str in filters_spec:
             parts = filter_str.split(":")
-            # TODO: replace assert with proper error message.
-            # e.g. warning_filters = ["error:DeprecationWarning"] has only 2 parts
-            # and crashes with bare AssertionError. Should print user-friendly message.
-            assert len(parts) >= 3
+            if len(parts) < 3:
+                print(f"Error: invalid warning_filters entry '{filter_str}' "
+                      f"(got {len(parts)} part(s), expected at least 3).\n"
+                      "       Format: 'action:message:category[:module]'. "
+                      "Leave a part empty to skip it, e.g. 'error::UserWarning'.",
+                      file=sys.stderr)
+                sys.exit(1)
             filter_dict = {
                 'action': parts[0],
                 'message': parts[1],

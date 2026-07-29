@@ -21,6 +21,23 @@ class TestCLI(unittest.TestCase):
         self.assertEqual(filters[1]['category'], DeprecationWarning)
         self.assertEqual(filters[1]['module'], '')
 
+    def test_warning_filters_minimal_three_parts(self):
+        cli = RutCLI()
+        filters = cli.warning_filters(["error::UserWarning"])
+        self.assertEqual(len(filters), 1)
+        self.assertEqual(filters[0]['action'], 'error')
+        self.assertEqual(filters[0]['message'], '')
+        self.assertEqual(filters[0]['category'], UserWarning)
+        self.assertEqual(filters[0]['module'], '')
+
+    def test_warning_filters_error_on_too_few_parts(self):
+        cli = RutCLI()
+        with patch('sys.stderr', new_callable=StringIO) as mock_stderr:
+            with self.assertRaises(SystemExit):
+                cli.warning_filters(["error:DeprecationWarning"])
+            self.assertIn("error:DeprecationWarning", mock_stderr.getvalue())
+            self.assertIn("action:message:category", mock_stderr.getvalue())
+
     def test_source_dirs_from_config(self):
         cli = RutCLI()
         cli.parse_args([])
