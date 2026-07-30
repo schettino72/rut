@@ -1,5 +1,5 @@
 source "https://rubygems.org"
 
-gem "jekyll", "~> 4.3"
-gem "jekyll-remote-theme"
-gem "jekyll-seo-tag"
+# Pin to the exact Jekyll/Sass versions GitHub Pages deploys, so local previews
+# use the same (lib)sass and catch build differences before they ship.
+gem "github-pages", group: :jekyll_plugins

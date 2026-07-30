@@ -1,7 +1,10 @@
 ---
 ---
 
-@use 'jekyll-theme-hacker';
+// NOTE: must be @import, not @use. GitHub Pages builds with
+// jekyll-sass-converter 1.5.2 (libsass), which predates @use and would silently
+// pass it through as an unknown at-rule, dropping the whole theme. See d86101f.
+@import 'jekyll-theme-hacker';
 
 // Base font size
 body {
