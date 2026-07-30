@@ -1,0 +1,13 @@
+<a class="sidebar-home" href="{{ '/' | relative_url }}">rut</a>
+
+{% for section in site.data.nav.sections %}
+<p class="sidebar-section">{{ section.title }}</p>
+<ul class="sidebar-links">
+  {% for article in section.articles %}
+  <li><a href="{{ article.url | relative_url }}" {% if page.url contains article.url %}class="active"{% endif %}>{{ article.title }}</a></li>
+  {% endfor %}
+</ul>
+{% endfor %}
+
+<a class="sidebar-github" href="https://github.com/schettino72/rut"
+   data-g4d="cta_click" data-g4d-target="sidebar-github">GitHub</a>

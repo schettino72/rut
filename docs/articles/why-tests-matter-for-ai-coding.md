@@ -1,6 +1,7 @@
 ---
 layout: default
 title: "Why Unit Tests Matter More for AI Coding Than for Humans"
+description: "AI agents can't remember what they broke. Your test suite can. Why fast, reliable tests are essential for AI coding workflows."
 ---
 
 An AI coding agent doesn't remember what it broke three iterations ago. Your test suite does.

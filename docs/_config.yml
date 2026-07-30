@@ -1,13 +1,33 @@
-title: "rut - Python Test Runner | Run Only Affected Tests"
-description: "Python test runner with incremental testing and dependency-aware ordering. Run only affected tests. Built for unittest and AI coding workflows."
+title: "rut"
+description: "A Python unittest runner with test impact analysis, dependency ordering, and incremental testing."
 remote_theme: pages-themes/hacker@v0.2.0
 baseurl: "/rut"
 url: "https://schettino72.github.io"
+# Paths are relative to baseurl — jekyll-seo-tag prepends it via absolute_url.
+# `logo` feeds the JSON-LD publisher block only.
+logo: /assets/images/logo.png
+
+# og:image / twitter:image come from jekyll-seo-tag's ImageDrop, which reads ONLY
+# page["image"] — a site-level `image:` key is ignored. Inject it as a front matter
+# default so every page gets a social preview; override per page as needed.
+defaults:
+  - scope:
+      path: ""
+    values:
+      image: /assets/images/logo.png
+
+# go4dash browser analytics. Publishable key — safe in page source.
+# See https://go4dash.com/integration-browser.md
+go4dash_key: "pk_XHb4Z-PP6J-aNw3k3w4vYiBss8FGs6Qw"
 markdown: kramdown
 kramdown:
   input: GFM
+sass:
+  quiet_deps: true
 plugins:
   - jekyll-remote-theme
+  - jekyll-seo-tag
 exclude:
   - README.md
   - LICENSE
+  - assets/images/*.html

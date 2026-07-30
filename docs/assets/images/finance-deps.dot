@@ -1,0 +1,106 @@
+digraph finance_deps {
+    // Global
+    bgcolor="#0d1117"
+    rankdir=TB
+    pad=0.5
+    nodesep=0.6
+    ranksep=1.0
+    fontname="Consolas,monospace"
+
+    // Default node style
+    node [
+        shape=box
+        style="rounded,filled"
+        fillcolor="#1a1a2e"
+        fontname="Consolas,monospace"
+        fontsize=12
+        width=1.6
+        height=0.4
+        penwidth=1.5
+    ]
+
+    // Default edge style
+    edge [penwidth=2]
+
+    // ── Source modules ──
+    utils [
+        label="utils.py"
+        color="#e2b714"
+        fontcolor="#e2b714"
+    ]
+    currency [
+        label="currency.py"
+        color="#7eb8da"
+        fontcolor="#7eb8da"
+    ]
+    account [
+        label="account.py"
+        color="#7eb8da"
+        fontcolor="#7eb8da"
+    ]
+    transaction [
+        label="transaction.py"
+        color="#7eb8da"
+        fontcolor="#7eb8da"
+    ]
+    report [
+        label="report.py"
+        color="#7eb8da"
+        fontcolor="#7eb8da"
+    ]
+
+    // ── Test modules ──
+    test_utils [
+        label="test_utils.py"
+        color="#e2b714"
+        fontcolor="#999999"
+        style="rounded,filled,dashed"
+    ]
+    test_currency [
+        label="test_currency.py"
+        color="#7eb8da"
+        fontcolor="#999999"
+        style="rounded,filled,dashed"
+    ]
+    test_account [
+        label="test_account.py"
+        color="#7eb8da"
+        fontcolor="#999999"
+        style="rounded,filled,dashed"
+    ]
+    test_transaction [
+        label="test_transaction.py"
+        color="#7eb8da"
+        fontcolor="#999999"
+        style="rounded,filled,dashed"
+    ]
+    test_report [
+        label="test_report.py"
+        color="#7eb8da"
+        fontcolor="#999999"
+        style="rounded,filled,dashed"
+    ]
+
+    // ── Source → source imports (solid) ──
+    currency -> utils [color="#888888"]
+    account -> currency [color="#888888"]
+    transaction -> currency [color="#888888"]
+    transaction -> account [color="#888888"]
+    report -> currency [color="#888888"]
+    report -> account [color="#888888"]
+    report -> transaction [color="#888888"]
+
+    // ── Test → source imports (dashed) ──
+    edge [style=dashed penwidth=1.5 color="#555555"]
+    test_utils -> utils
+    test_currency -> currency
+    test_account -> account
+    test_transaction -> account
+    test_transaction -> transaction
+    test_report -> account
+    test_report -> transaction
+    test_report -> report
+
+    // ── Layout hints ──
+    { rank=same; test_utils; test_currency; test_account; test_transaction; test_report }
+}

@@ -1,0 +1,90 @@
+// Variant: transaction.py changed — highlights affected tests
+digraph finance_deps_changed {
+    // Global
+    bgcolor="#0d1117"
+    rankdir=TB
+    pad=0.5
+    nodesep=0.6
+    ranksep=1.0
+    fontname="Consolas,monospace"
+
+    // Default node style (dimmed)
+    node [
+        shape=box
+        style="rounded,filled"
+        fillcolor="#1a1a2e"
+        fontname="Consolas,monospace"
+        fontsize=12
+        width=1.6
+        height=0.4
+        penwidth=1.5
+        color="#333333"
+        fontcolor="#444444"
+    ]
+
+    // Default edge style (dimmed)
+    edge [penwidth=2 color="#333333"]
+
+    // ── Source modules (dimmed) ──
+    utils [label="utils.py"]
+    currency [label="currency.py"]
+    account [label="account.py"]
+
+    // ── Changed module (highlighted) ──
+    transaction [
+        label="transaction.py"
+        color="#f0883e"
+        fontcolor="#f0883e"
+        penwidth=2.5
+    ]
+
+    report [label="report.py"]
+
+    // ── Test modules (dimmed) ──
+    node [style="rounded,filled,dashed"]
+    test_utils [label="test_utils.py"]
+    test_currency [label="test_currency.py"]
+    test_account [label="test_account.py"]
+
+    // ── Affected test modules (highlighted) ──
+    test_transaction [
+        label="test_transaction.py"
+        color="#f0883e"
+        fontcolor="#cccccc"
+        style="rounded,filled,dashed"
+        penwidth=2
+    ]
+    test_report [
+        label="test_report.py"
+        color="#f0883e"
+        fontcolor="#cccccc"
+        style="rounded,filled,dashed"
+        penwidth=2
+    ]
+
+    // ── Source → source imports (dimmed) ──
+    currency -> utils
+    account -> currency
+    transaction -> currency
+    transaction -> account
+    report -> currency
+    report -> account
+    report -> transaction
+
+    // ── Test → source imports (dimmed) ──
+    edge [style=dashed penwidth=1.5 color="#333333"]
+    test_utils -> utils
+    test_currency -> currency
+    test_account -> account
+    test_report -> account
+
+    // ── Affected edges (highlighted) ──
+    edge [style=dashed penwidth=2 color="#f0883e"]
+    test_transaction -> transaction
+    test_transaction -> account [color="#333333" penwidth=1.5]
+    test_report -> transaction
+    test_report -> report [color="#333333" penwidth=1.5]
+
+    // ── Layout hints ──
+    { rank=same; test_utils; test_currency; test_account; test_transaction; test_report }
+}

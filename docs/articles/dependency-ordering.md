@@ -1,7 +1,8 @@
 ---
 layout: article
 title: "Why Test Order Matters: Dependency-Aware Testing"
-description: "Run foundational tests first. Fail fast, debug easier. How rut uses your import graph to order tests."
+description: "Topological test ordering by import dependencies. Run foundational tests first, fail fast, debug easier. How rut uses your import graph to order tests."
+date: 2026-02-07
 ---
 
 When a test fails, you want to know immediately. But if your test runner executes tests in arbitrary order, you might wait minutes before seeing the failure that matters.
@@ -13,35 +14,22 @@ When a test fails, you want to know immediately. But if your test runner execute
 Most test runners discover tests alphabetically or by file modification time. This means:
 
 ```
-tests/test_api.py        # runs first (alphabetically)
-tests/test_models.py     # runs second
-tests/test_utils.py      # runs third
+tests/test_account.py      # runs first (alphabetically)
+tests/test_currency.py     # runs second
+tests/test_report.py       # runs third
+tests/test_transaction.py  # runs fourth
+tests/test_utils.py        # runs last
 ```
 
-But what if `test_utils.py` tests the foundational code that everything else depends on? A bug in `utils.py` will cause cascading failures across all tests — but you won't see the root cause until the end.
+But what if `test_utils.py` tests the foundational code that everything else depends on? A bug in `utils.py` will cause cascading failures across all tests — but you won't see the root cause until the very end.
 
 ## Import graph to the rescue
 
-Your code has a natural dependency structure. If `models.py` imports from `utils.py`, then `utils` is more foundational. Tests for foundational modules should run first.
+Your code has a natural dependency structure. If `currency.py` imports from `utils.py`, then `utils` is more foundational. Tests for foundational modules should run first.
 
-<pre class="mermaid">
-graph TB
-    utils["utils.py"]
-    models["models.py"]
-    auth["auth.py"]
-    api["api.py"]
-    views["views.py"]
+<img src="{{ '/assets/images/finance-deps.svg' | relative_url }}" alt="Finance module dependency graph showing import relationships" class="article-image">
 
-    api --> models
-    api --> auth
-    views --> models
-    models --> utils
-    auth --> utils
-</pre>
-
-Topological sorting gives us: `utils → models → api`
-
-If we run tests in this order, a bug in `utils.py` fails fast — you see it in seconds, not minutes.
+<span class="rut">rut</span> [analyzes your imports]({{ '/articles/import-graph' | relative_url }}) to build a dependency graph and topological sorts it: `utils → currency → account → transaction → report`. A bug in `utils.py` fails fast — you see it in seconds, not minutes.
 
 ## How <span class="rut">rut</span> does it
 
@@ -51,8 +39,10 @@ If we run tests in this order, a bug in `utils.py` fails fast — you see it in 
 $ rut --dry-run
 Test order (by import dependencies):
   tests/test_utils.py::TestUtils
-  tests/test_models.py::TestModels
-  tests/test_api.py::TestAPI
+  tests/test_currency.py::TestCurrency
+  tests/test_account.py::TestAccount
+  tests/test_transaction.py::TestTransaction
+  tests/test_report.py::TestReport
 ```
 
 No configuration needed. It reads your actual imports and sorts accordingly.
@@ -64,11 +54,12 @@ There's another benefit: when a foundational module breaks, you don't have to di
 A bug in `utils.py` causes cascading failures. With alphabetical order:
 
 ```
-FAIL test_api.py::test_create_user - AttributeError: 'NoneType' has no 'id'
-FAIL test_api.py::test_delete_user - AttributeError: 'NoneType' has no 'id'
-FAIL test_models.py::test_user_model - AttributeError: 'NoneType' has no 'id'
-... 297 more failures ...
-FAIL test_utils.py::test_parse_config - KeyError: 'database'
+FAIL test_account.py::test_balance_in_eur - TypeError: unsupported operand type
+FAIL test_currency.py::test_convert_usd_to_eur - ImportError: cannot import name
+FAIL test_report.py::test_net_worth - TypeError: unsupported operand type
+FAIL test_transaction.py::test_cross_currency - TypeError: unsupported operand type
+... more failures ...
+FAIL test_utils.py::test_round_amount - NameError: name 'round' is not defined
 ```
 
 Which failure matters? You have to guess.
@@ -77,15 +68,14 @@ With dependency order and `-x` (stop on first failure):
 
 ```bash
 $ rut -x
-FAIL test_utils.py::test_parse_config - KeyError: 'database'
+FAIL test_utils.py::test_round_amount - NameError: name 'round' is not defined
 Stopping at first failure.
 ```
 
-The first failure points directly to the root cause. No need to wade through 300 cascading failures to find the one that matters.
+The first failure points directly to the root cause. No need to wade through cascading failures to find the one that matters.
 
 ## Limitations
 
-- **Circular imports**: If A imports B and B imports A, topological sort can't help. This is a code smell anyway. You can check for circular imports with [import-deps](https://github.com/schettino72/import-deps).
 - **Test isolation**: This assumes tests are independent. If test order affects results, you have flaky tests.
-- **Dynamic imports**: Only static imports are analyzed. `importlib.import_module()` isn't tracked.
+- See [how the import graph works]({{ '/articles/import-graph' | relative_url }}) for details on what is and isn't tracked (dynamic imports, circular dependencies, etc.).
 

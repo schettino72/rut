@@ -1,40 +1,23 @@
 ---
 layout: article
-title: "Incremental Testing: Run Only What Changed"
-description: "Skip unaffected tests. Track dependencies, run only what's stale. How rut uses import analysis for faster test runs."
+title: "Incremental Testing: Run Only Affected Tests"
+description: "Test impact analysis for Python unittest. Run only affected tests after a change — skip what's up-to-date. Change-based selective testing with rut."
+date: 2026-02-07
 ---
 
 If you changed one file, why run 500 tests?
 
-Incremental testing means running only the tests affected by your changes. It's the same principle behind `make`: track dependencies, rebuild only what's stale.
+Incremental testing — also known as test impact analysis or change-based testing — means running only the tests affected by your changes. It's the same principle behind `make`: track dependencies, rebuild only what's stale.
 
-This isn't a new idea. [pytest-incremental](https://github.com/pytest-dev/pytest-incremental) (2008) and [testmon](https://github.com/tarpas/pytest-testmon) have been doing this for pytest. <span class="rut">rut</span> brings it to unittest with a focus on simplicity and AI coding workflows.
+In other ecosystems this is called "affected tests" (Nx, Bazel, Pants) or "selective testing". [pytest-incremental](https://github.com/pytest-dev/pytest-incremental) (2011) and [testmon](https://github.com/tarpas/pytest-testmon) have been doing this for pytest. <span class="rut">rut</span> brings it to unittest with a focus on simplicity and AI coding workflows.
 
 ## The dependency graph
 
-Every Python module has imports. These form a directed graph:
+<span class="rut">rut</span> [builds a dependency graph]({{ '/articles/import-graph' | relative_url }}) from your static imports. It tracks dependencies at the **module level**, not individual test functions. If a module you changed is imported by a test module, the entire test module runs.
 
-<pre class="mermaid">
-graph LR
-    auth["auth.py"]
-    users["users.py"]
-    db["db.py"]
-    api["api.py"]
-    main["main.py"]
+If you change `currency.py`, which tests need to run? All of them — every module imports currency. If you change `account.py`? Only `test_account`, `test_transaction`, and `test_report`. `test_currency` doesn't depend on account — skip it.
 
-    main --> api
-    api --> auth
-    api --> users
-    api --> db
-</pre>
-
-If you change `db.py`, which tests need to run?
-
-1. Tests for `db.py` (direct)
-2. Tests for `api.py` (imports db)
-3. Tests for `main.py` (imports api, which imports db)
-
-Tests for `auth.py` and `users.py`? They don't depend on `db.py`. Skip them.
+<img src="{{ '/assets/images/finance-deps-changed.svg' | relative_url }}" alt="Dependency graph highlighting affected tests when transaction.py changes" class="article-image">
 
 ## How <span class="rut">rut</span> tracks this
 
@@ -42,43 +25,42 @@ First run builds the graph:
 
 ```bash
 $ rut
-Building dependency graph...
-Running 50 tests
-========== 50 passed in 12.5s ==========
+tests/test_utils.py ....                [ 16%]
+tests/test_currency.py ......           [ 41%]
+tests/test_account.py .....             [ 62%]
+tests/test_transaction.py .....         [ 83%]
+tests/test_report.py ....              [100%]
+
+────────────── 24 passed in 5.4s ──────────────
 ```
 
 Subsequent runs with `--changed` check what's stale:
 
 ```bash
-$ git diff --name-only
-src/db.py
-
 $ rut --changed
-Affected by changes: 12 tests
-Skipping: 38 tests (unchanged)
-========== 12 passed in 2.1s ==========
+tests/test_utils.py ⚡ 4 up-to-date     [ 16%]
+tests/test_currency.py ⚡ 6 up-to-date  [ 41%]
+tests/test_account.py .....             [ 62%]
+tests/test_transaction.py .....         [ 83%]
+tests/test_report.py ....              [100%]
+
+────────────── 14 passed, 10 up-to-date in 4.8s ──────────────
 ```
 
-12 tests instead of 50. Same confidence, 80% less time.
+14 tests instead of 24. Same confidence, less time.
 
 ## What counts as "changed"?
 
-<span class="rut">rut</span> checks file modification times against the last test run:
+<span class="rut">rut</span> hashes every file in `source_dirs` and compares against the last successful run:
 
-- **Source files**: `src/*.py` — if changed, tests depending on them run
-- **Test files**: `tests/*.py` — if changed, that test runs
-- **Config files**: Can be configured to trigger full runs
+- **Source files**: `finance/*.py` — if changed, tests depending on them run
+- **Test files**: `tests/*.py` — if changed, that test module runs
 
 ```bash
-$ rut --changed --verbose
-Checking for changes since last run...
-  src/db.py: modified
-  src/api.py: unchanged
-  tests/test_db.py: unchanged
-
-Affected modules: db, api, main
-Running: test_db, test_api, test_main
-Skipping: test_auth, test_users
+$ rut --changed --debug
+Changed modules: finance.account
+Affected tests: test_account, test_transaction, test_report
+Skipping: test_utils, test_currency (up-to-date)
 ```
 
 ## The cache
@@ -87,19 +69,18 @@ Skipping: test_auth, test_users
 
 ```
 .rut_cache/
-├── deps.json      # import graph
-└── timestamps     # last run times
+└── file_hashes.json   # SHA256 hashes of all tracked files
 ```
 
-Add to `.gitignore`. The cache rebuilds automatically if imports change.
+Add to `.gitignore`. The cache is only updated after a successful test run — if tests fail, the cache stays stale so the same tests run again next time.
 
 ## When incremental testing doesn't help
 
-**Everything depends on everything**: If your `utils.py` is imported by every module, changing it runs all tests. This is feedback about your architecture — maybe `utils.py` is too big.
-
-**Circular dependencies**: A imports B, B imports A. The graph becomes a single strongly-connected component. Everything runs together. Check for these with [import-deps](https://github.com/schettino72/import-deps).
+**Everything depends on everything**: If your `currency.py` is imported by every module, changing it runs all tests. This is feedback about your architecture — maybe that module is doing too much.
 
 **Heavy test fixtures**: If setup is slow (database, network), skipping tests doesn't save much. Focus on faster fixtures.
+
+See [how the import graph works]({{ '/articles/import-graph' | relative_url }}) for more details on what is and isn't tracked.
 
 ## Combining with dependency ordering
 

@@ -13,15 +13,48 @@
   <body>
 
     <header>
-      <div class="container">
-        <a id="a-title" href="{{ '/' | relative_url }}">
-          <h1>{{ site.title | default: site.github.repository_name }}</h1>
+      <div class="container header-row">
+        <div>
+          <a id="a-title" href="{{ '/' | relative_url }}">
+            <h1>{{ site.title | default: site.github.repository_name }}</h1>
+          </a>
+          <h2>{{ site.description | default: site.github.project_tagline }}</h2>
+        </div>
+        <a href="https://github.com/schettino72/rut" class="header-github" aria-label="View on GitHub"
+           data-g4d="cta_click" data-g4d-target="header-github">
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
         </a>
-        <h2>{{ site.description | default: site.github.project_tagline }}</h2>
       </div>
     </header>
 
-    <div class="container">
+    {% comment %} Flatten nav data into a single list and find prev/next {% endcomment %}
+    {% assign all_articles = "" | split: "" %}
+    {% for section in site.data.nav.sections %}
+      {% for article in section.articles %}
+        {% assign all_articles = all_articles | push: article %}
+      {% endfor %}
+    {% endfor %}
+
+    {% assign nav_prev = nil %}
+    {% assign nav_next = nil %}
+    {% for article in all_articles %}
+      {% if page.url contains article.url %}
+        {% assign current_index = forloop.index0 %}
+        {% if current_index > 0 %}
+          {% assign prev_index = current_index | minus: 1 %}
+          {% assign nav_prev = all_articles[prev_index] %}
+        {% endif %}
+        {% assign next_index = current_index | plus: 1 %}
+        {% if next_index < all_articles.size %}
+          {% assign nav_next = all_articles[next_index] %}
+        {% endif %}
+      {% endif %}
+    {% endfor %}
+
+    <div class="container content-with-sidebar">
+      <nav class="sidebar">
+        {% include sidebar.html %}
+      </nav>
       <section id="main_content">
         <article>
           <h1 class="article-title">{{ page.title }}</h1>
@@ -29,10 +62,19 @@
         </article>
 
         <footer class="article-footer">
-          <a href="{{ '/' | relative_url }}">← Back to rut</a>
-          <a href="https://github.com/schettino72/rut">GitHub</a>
+          {% if nav_prev %}
+            <a href="{{ nav_prev.url | relative_url }}">← {{ nav_prev.title }}</a>
+          {% else %}
+            <span></span>
+          {% endif %}
+          {% if nav_next %}
+            <a href="{{ nav_next.url | relative_url }}">{{ nav_next.title }} →</a>
+          {% endif %}
         </footer>
       </section>
     </div>
+
+    <script src="https://go4dash.com/atrack.js"></script>
+    <script>atrack.init('{{ site.go4dash_key }}')</script>
   </body>
 </html>

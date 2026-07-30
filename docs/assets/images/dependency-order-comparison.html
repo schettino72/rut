@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dependency Order Comparison</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace;
+    background: #0d1117;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+  }
+
+  .container {
+    background: #0d1117;
+    padding: 28px 32px;
+    width: 520px;
+  }
+
+  .section {
+    margin-bottom: 24px;
+  }
+  .section:last-child {
+    margin-bottom: 0;
+  }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #555;
+    margin-bottom: 8px;
+  }
+
+  /* Timeline bar track */
+  .track {
+    display: flex;
+    height: 32px;
+    border-radius: 4px;
+    overflow: hidden;
+    gap: 2px;
+  }
+
+  .bar {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 600;
+    white-space: nowrap;
+    border-radius: 2px;
+  }
+
+  .bar.pass {
+    background: #1a3a1a;
+    color: #4a8;
+  }
+  .bar.fail {
+    background: #3a1a1a;
+    color: #e55;
+  }
+  .bar.root-fail {
+    background: #d32f2f;
+    color: #fff;
+  }
+
+  /* Annotation row below track */
+  .annotation {
+    display: flex;
+    align-items: center;
+    margin-top: 6px;
+    gap: 6px;
+    font-size: 11px;
+  }
+
+  .annotation .tag {
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+  }
+  .tag-bad {
+    background: #3a1a1a;
+    color: #e55;
+  }
+  .tag-good {
+    background: #1a3a1a;
+    color: #5b5;
+  }
+
+  .annotation .note {
+    color: #666;
+  }
+
+  /* Divider */
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 16px 0;
+  }
+  .divider-line {
+    flex: 1;
+    height: 1px;
+    background: #222;
+  }
+  .divider-text {
+    font-size: 10px;
+    color: #444;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  /* Time label */
+  .time-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: #444;
+    margin-top: 4px;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Alphabetical Order -->
+  <div class="section">
+    <div class="section-label">Alphabetical order</div>
+    <div class="track">
+      <div class="bar fail" style="width: 8%;" title="test_account">account</div>
+      <div class="bar pass" style="width: 12%;" title="test_currency">currency</div>
+      <div class="bar fail" style="width: 38%;" title="test_report">test_report (FAIL)</div>
+      <div class="bar fail" style="width: 30%;" title="test_transaction">test_transaction (FAIL)</div>
+      <div class="bar root-fail" style="width: 12%;" title="test_utils">test_utils</div>
+    </div>
+    <div class="time-row">
+      <span>0s</span>
+      <span>5.4s</span>
+    </div>
+    <div class="annotation">
+      <span class="tag tag-bad">root cause found last</span>
+      <span class="note">— cascading failures hide the real bug</span>
+    </div>
+  </div>
+
+  <div class="divider">
+    <span class="divider-line"></span>
+    <span class="divider-text">vs</span>
+    <span class="divider-line"></span>
+  </div>
+
+  <!-- Dependency Order -->
+  <div class="section">
+    <div class="section-label">Dependency order</div>
+    <div class="track">
+      <div class="bar root-fail" style="width: 3%;" title="test_utils"></div>
+      <div class="bar" style="width: 97%; background: #161b22;"></div>
+    </div>
+    <div class="time-row">
+      <span>0s</span>
+      <span style="color: #5b5;">stopped at 0.01s</span>
+    </div>
+    <div class="annotation">
+      <span class="tag tag-good">root cause found first</span>
+      <span class="note">— test_utils fails immediately, <code style="color:#5b5; background:none; padding:0; font-size:inherit;">-x</code> stops</span>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

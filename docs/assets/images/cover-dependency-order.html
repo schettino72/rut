@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dependency Order — Cover</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'JetBrains Mono', Consolas, monospace;
+    background: #0d1117;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+  }
+
+  .container {
+    background: #0d1117;
+    padding: 32px 36px;
+    width: 320px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #444;
+    margin-bottom: 6px;
+  }
+
+  .track {
+    height: 20px;
+    border-radius: 3px;
+    display: flex;
+    overflow: hidden;
+    gap: 2px;
+  }
+
+  .bar {
+    height: 100%;
+    border-radius: 2px;
+  }
+
+  .pass { background: #1a2e1a; }
+  .fail { background: #3a1a1a; }
+  .root { background: #d32f2f; }
+  .empty { background: #161b22; }
+
+  .x-mark {
+    font-size: 18px;
+    color: #d32f2f;
+    margin-left: 8px;
+    line-height: 20px;
+  }
+
+  .row {
+    display: flex;
+    align-items: center;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <div>
+    <div class="label">Alphabetical</div>
+    <div class="row">
+      <div class="track" style="flex: 1;">
+        <div class="bar fail" style="width: 8%;"></div>
+        <div class="bar pass" style="width: 12%;"></div>
+        <div class="bar fail" style="width: 38%;"></div>
+        <div class="bar fail" style="width: 30%;"></div>
+        <div class="bar root" style="width: 12%;"></div>
+      </div>
+      <span class="x-mark">✕</span>
+    </div>
+  </div>
+
+  <div>
+    <div class="label">Dependency order</div>
+    <div class="row">
+      <div class="track" style="flex: 1;">
+        <div class="bar root" style="width: 3%;"></div>
+        <div class="bar empty" style="width: 97%;"></div>
+      </div>
+      <span class="x-mark">✕</span>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

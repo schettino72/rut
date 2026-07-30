@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Incremental Testing</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace;
+    background: #0d1117;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+  }
+
+  .container {
+    background: #0d1117;
+    padding: 28px 32px;
+    width: 520px;
+  }
+
+  .section {
+    margin-bottom: 24px;
+  }
+  .section:last-child {
+    margin-bottom: 0;
+  }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #555;
+    margin-bottom: 8px;
+  }
+
+  /* Test module rows */
+  .test-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .test-row {
+    display: flex;
+    align-items: center;
+    height: 24px;
+    gap: 8px;
+  }
+
+  .test-name {
+    font-size: 11px;
+    width: 130px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .test-name.run {
+    color: #7eb8da;
+  }
+  .test-name.skip {
+    color: #444;
+  }
+
+  .test-bar {
+    height: 100%;
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    font-size: 10px;
+    font-weight: 600;
+  }
+
+  .test-bar.run {
+    background: #1a3a1a;
+    color: #5b5;
+  }
+  .test-bar.skip {
+    background: #161b22;
+    color: #444;
+    border: 1px dashed #2a2a2a;
+  }
+
+  .test-dots {
+    font-size: 11px;
+    letter-spacing: 2px;
+  }
+  .test-dots.run {
+    color: #5b5;
+  }
+  .test-dots.skip {
+    color: #333;
+  }
+
+  /* Divider */
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 16px 0;
+  }
+  .divider-line {
+    flex: 1;
+    height: 1px;
+    background: #222;
+  }
+  .divider-text {
+    font-size: 10px;
+    color: #444;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  /* Summary row */
+  .summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    font-size: 11px;
+  }
+
+  .tag {
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+  }
+  .tag-neutral {
+    background: #1a1a2e;
+    color: #7eb8da;
+  }
+  .tag-good {
+    background: #1a3a1a;
+    color: #5b5;
+  }
+  .note {
+    color: #666;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- rut (all tests) -->
+  <div class="section">
+    <div class="section-label">rut — all tests</div>
+    <div class="test-list">
+      <div class="test-row">
+        <span class="test-name run">test_utils</span>
+        <span class="test-dots run">····</span>
+      </div>
+      <div class="test-row">
+        <span class="test-name run">test_currency</span>
+        <span class="test-dots run">······</span>
+      </div>
+      <div class="test-row">
+        <span class="test-name run">test_account</span>
+        <span class="test-dots run">·····</span>
+      </div>
+      <div class="test-row">
+        <span class="test-name run">test_transaction</span>
+        <span class="test-dots run">·····</span>
+      </div>
+      <div class="test-row">
+        <span class="test-name run">test_report</span>
+        <span class="test-dots run">····</span>
+      </div>
+    </div>
+    <div class="summary">
+      <span class="tag tag-neutral">24 passed</span>
+      <span class="note">5.4s</span>
+    </div>
+  </div>
+
+  <div class="divider">
+    <span class="divider-line"></span>
+    <span class="divider-text">after editing account.py</span>
+    <span class="divider-line"></span>
+  </div>
+
+  <!-- rut --changed -->
+  <div class="section">
+    <div class="section-label">rut --changed</div>
+    <div class="test-list">
+      <div class="test-row">
+        <span class="test-name skip">test_utils</span>
+        <span class="test-bar skip">up-to-date</span>
+      </div>
+      <div class="test-row">
+        <span class="test-name skip">test_currency</span>
+        <span class="test-bar skip">up-to-date</span>
+      </div>
+      <div class="test-row">
+        <span class="test-name run">test_account</span>
+        <span class="test-dots run">·····</span>
+      </div>
+      <div class="test-row">
+        <span class="test-name run">test_transaction</span>
+        <span class="test-dots run">·····</span>
+      </div>
+      <div class="test-row">
+        <span class="test-name run">test_report</span>
+        <span class="test-dots run">····</span>
+      </div>
+    </div>
+    <div class="summary">
+      <span class="tag tag-good">14 passed</span>
+      <span class="note">10 up-to-date — 3.2s</span>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

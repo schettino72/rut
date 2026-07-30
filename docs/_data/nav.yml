@@ -1,0 +1,22 @@
+sections:
+  - title: "Guide"
+    articles:
+      - url: /articles/usage
+        title: Usage
+
+  - title: "How it works"
+    articles:
+      - url: /articles/dependency-ordering
+        title: Dependency Ordering
+      - url: /articles/incremental-testing
+        title: Incremental Testing
+
+  - title: "How-to"
+    articles:
+      - url: /articles/migrate-from-pytest
+        title: Migrate from pytest
+
+  - title: "Internals"
+    articles:
+      - url: /articles/import-graph
+        title: The Import Graph
