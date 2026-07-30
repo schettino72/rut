@@ -2,7 +2,7 @@
 Changes
 =======
 
-0.4.0 (unreleased)
+0.4.0 (2026-07-30)
 ====================
 
 - Removed deprecated `coverage_source` config option (use `source_dirs` instead).
@@ -19,6 +19,8 @@ Changes
 - FD-level output capture: subprocess stdout/stderr no longer leaks to terminal.
   Captured output shown in panels on test failure.
 - Improved output on terminal (color, diff, etc).
+- Invalid `warning_filters` config now reports a user-friendly error instead of
+  crashing with a bare `AssertionError`.
 
 
 0.3.0 (2026-02-03)
